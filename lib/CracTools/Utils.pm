@@ -727,7 +727,7 @@ sub getFileIterator {
   
   # Skip line that match a specific regex
   if(defined $header_regex) {
-    while($line =~ /$header_regex/) {
+    while($line && $line =~ /$header_regex/) {
       $curr_pos = tell($fh);
       $line = <$fh>;
     }
