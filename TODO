@@ -1,1 +1,5 @@
 - Manage GFF files instead of using Ensembl API (Optional).
+- Integrate SAMTOOLS tabix API to read BAM files quicker
+- Measure Interval::Query::File vs tabix
+- When Querying and interval we want to retrieve the data and the interval that is associated to this data
+
