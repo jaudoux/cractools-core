@@ -88,17 +88,18 @@ $pm -> run_on_finish ( # called BEFORE the first call to start()
     if (defined($data_structure_reference)) {
       my $region_chimeras = $data_structure_reference->{chimeras};
       foreach my $key (keys %{$region_chimeras}) {
-        my ($chr1,$pos1,$strand1,$chr2,$pos2,$strand2) = split("@",$key);
+        my $chim_key = $key;
+        my ($chr1,$pos1,$strand1,$chr2,$pos2,$strand2) = split("@",$chim_key);
         my $reverse_key = join("@",$chr2,$pos2,$strand2*-1,$chr1,$pos1,$strand1*-1);
         if(!$is_stranded && defined $chimeras{$reverse_key}) {
-          $key = $reverse_key;
+          $chim_key = $reverse_key;
         }
-        if(defined $chimeras{$key}) {
-          push(@{$chimeras{$key}{reads}},@{$region_chimeras->{$key}->{reads}});
-          $chimeras{$key}{score} += $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
+        if(defined $chimeras{$chim_key}) {
+          push(@{$chimeras{$chim_key}{reads}},@{$region_chimeras->{$key}->{reads}});
+          $chimeras{$chim_key}{score} += $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
         } else {
-          $chimeras{$key}{reads} = $region_chimeras->{$key}->{reads};
-          $chimeras{$key}{score} = $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
+          $chimeras{$chim_key}{reads} = $region_chimeras->{$key}->{reads};
+          $chimeras{$chim_key}{score} = $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
         }
       }
     }
