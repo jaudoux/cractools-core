@@ -279,6 +279,8 @@ sub extractMutationsFromSAMline {
       # We only add SNPS that correspond to the current region
       next if $pos >= $region_end || $pos < $region_start;
 
+      next if $snp->{actual} =~ /N/i;
+
       # Uniq Hash key for SNP
       my $key = 'SNP'.$chr."@".$pos;
 
