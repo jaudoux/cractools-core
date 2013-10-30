@@ -5,7 +5,8 @@ use warnings;
 
 use Getopt::Long; # Get options
 use Pod::Usage;   # Printing pod documentation in terminal
-use File::Temp;
+use File::Temp;   # Generate temporary files and directories
+use File::Spec;   # Transform relative path to abs path
 
 use CracTools::Config;
 
@@ -49,29 +50,34 @@ sub printUsage {
   }
 }
 
+# Set get opt hash
 my %getOpt_hash;
-
 foreach my $opt (keys %options) {
   $options{$opt}->{value} = undef;
   $getOpt_hash{$opt} = \$options{$opt}->{value};
 }
 
+# Retrieve options using Getopt::Long
 GetOptions(%getOpt_hash);
 
 foreach my $opt (keys %options) {
+  # Check if mandatory option is missing
   if(!defined $options{$opt}->{value} && $options{$opt}->{type} eq 'mandatory') {
     print STDERR "Missing option: $opt\n";
     printUsage();
     exit 1;
   }
-  #print "Opt: $option, value: ".$option_values{$option}."\n";
+  # if option is a file, transform relative file path to absolute
+  if(defined $options{$opt}->{value} && -e $options{$opt}->{value}) {
+    $options{$opt}->{value} = File::Spec->rel2abs($options{$opt}->{value});
+  }
 }
 
 my $chunks_dir = $options{$chunks_dir_name}->{value};
 $chunks_dir = CracTools::Config::getConfVar('REPORT_CHUNKS_DIR') unless defined $chunks_dir;
 die "Missing REPORT_CHUNKS_DIR in conf file" if !defined $chunks_dir;
 
-my $report_fulfilled = File::Temp->new(UNLINK => 0);
+my $report_fulfilled = File::Temp->new();
 open(IN,$report_file) or die("Cannot open $report_file");
 
 while(<IN>) {
