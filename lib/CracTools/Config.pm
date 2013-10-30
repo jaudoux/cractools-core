@@ -87,6 +87,7 @@ use utf8;
 use Config::FileManager;
 use Config::Simple;
 use File::Basename;
+use File::HomeDir;
 use Carp;
 
 use CracTools;
@@ -106,6 +107,7 @@ our $cfg = new Config::FileManager(
     "version" => "$CracTools::VERSION", # Not mandatory
     "filename" => "$CONFIG_NAME", # Not mandatory
     "paths" => [
+    File::HomeDir->my_home,
 		".",
 		".".$CracTools::PACKAGE_NAME,
 		"__APPDIR__",
