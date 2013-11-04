@@ -1,1 +1,2 @@
-perl Makefile.PL PREFIX=~/perl5lib/ INST_SCRIPT=~/bin/ LIB=~/perl5lib/lib/ & make & make install
+INSTALL_DIR=$1
+perl Makefile.PL PREFIX=$INSTALL_DIR LIB=$INSTALL_DIR/lib/perl5 && make && make install
