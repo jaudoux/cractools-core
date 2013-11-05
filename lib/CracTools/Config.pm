@@ -107,8 +107,8 @@ our $cfg = new Config::FileManager(
     "version" => "$CracTools::VERSION", # Not mandatory
     "filename" => "$CONFIG_NAME", # Not mandatory
     "paths" => [
-    File::HomeDir->my_home,
 		".",
+    File::HomeDir->my_home,
 		".".$CracTools::PACKAGE_NAME,
 		"__APPDIR__",
 		"/usr/local/etc/".$CracTools::PACKAGE_NAME,

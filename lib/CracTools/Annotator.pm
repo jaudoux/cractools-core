@@ -1,3 +1,92 @@
+###############################################################################
+#                                                                             #
+#    Copyright © 2012-2013 -- IRB/INSERM                                      #
+#                            (Institut de Recherche en Biothérapie /          #
+#                             Institut National de la Santé et de la          #
+#                             Recherche Médicale)                             #
+#                             LIRMM/UM2                                       #
+#                            (Laboratoire d'Informatique, de Robotique et de  #
+#                             Microélectronique de Montpellier /              #
+#                             Université de Montpellier 2)                    #
+#                                                                             #
+#  Auteurs/Authors: Nicolas PHILIPPE <nicolas.philippe@inserm.fr>             #
+#                   Jerome AUDOUX  <jerome.audoux@univ-montp2.fr>             #
+#                                                                             #
+#  -------------------------------------------------------------------------  #
+#                                                                             #
+#  Ce fichier  fait partie  du Pipeline  de traitement  de données NGS de la  #
+#  plateforme ATGC labélisée par le GiS IBiSA.                                #
+#                                                                             #
+#  Ce logiciel est régi  par la licence CeCILL  soumise au droit français et  #
+#  respectant les principes  de diffusion des logiciels libres.  Vous pouvez  #
+#  utiliser, modifier et/ou redistribuer ce programme sous les conditions de  #
+#  la licence CeCILL  telle que diffusée par le CEA,  le CNRS et l'INRIA sur  #
+#  le site "http://www.cecill.info".                                          #
+#                                                                             #
+#  En contrepartie de l'accessibilité au code source et des droits de copie,  #
+#  de modification et de redistribution accordés par cette licence, il n'est  #
+#  offert aux utilisateurs qu'une garantie limitée.  Pour les mêmes raisons,  #
+#  seule une responsabilité  restreinte pèse  sur l'auteur du programme,  le  #
+#  titulaire des droits patrimoniaux et les concédants successifs.            #
+#                                                                             #
+#  À  cet égard  l'attention de  l'utilisateur est  attirée sur  les risques  #
+#  associés  au chargement,  à  l'utilisation,  à  la modification  et/ou au  #
+#  développement  et à la reproduction du  logiciel par  l'utilisateur étant  #
+#  donné  sa spécificité  de logiciel libre,  qui peut le rendre  complexe à  #
+#  manipuler et qui le réserve donc à des développeurs et des professionnels  #
+#  avertis  possédant  des  connaissances  informatiques  approfondies.  Les  #
+#  utilisateurs  sont donc  invités  à  charger  et  tester  l'adéquation du  #
+#  logiciel  à leurs besoins  dans des conditions  permettant  d'assurer  la  #
+#  sécurité de leurs systêmes et ou de leurs données et,  plus généralement,  #
+#  à l'utiliser et l'exploiter dans les mêmes conditions de sécurité.         #
+#                                                                             #
+#  Le fait  que vous puissiez accéder  à cet en-tête signifie  que vous avez  #
+#  pris connaissance  de la licence CeCILL,  et que vous en avez accepté les  #
+#  termes.                                                                    #
+#                                                                             #
+#  -------------------------------------------------------------------------  #
+#                                                                             #
+#  This File is part of the NGS data processing Pipeline of the ATGC          #
+#  accredited by the IBiSA GiS.                                               #
+#                                                                             #
+#  This software is governed by the CeCILL license under French law and       #
+#  abiding by the rules of distribution of free software. You can use,        #
+#  modify and/ or redistribute the software under the terms of the CeCILL     #
+#  license as circulated by CEA, CNRS and INRIA at the following URL          #
+#  "http://www.cecill.info".                                                  #
+#                                                                             #
+#  As a counterpart to the access to the source code and rights to copy,      #
+#  modify and redistribute granted by the license, users are provided only    #
+#  with a limited warranty and the software's author, the holder of the       #
+#  economic rights, and the successive licensors have only limited            #
+#  liability.                                                                 #
+#                                                                             #
+#  In this respect, the user's attention is drawn to the risks associated     #
+#  with loading, using, modifying and/or developing or reproducing the        #
+#  software by the user in light of its specific status of free software,     #
+#  that may mean that it is complicated to manipulate, and that also          #
+#  therefore means that it is reserved for developers and experienced         #
+#  professionals having in-depth computer knowledge. Users are therefore      #
+#  encouraged to load and test the software's suitability as regards their    #
+#  requirements in conditions enabling the security of their systems and/or   #
+#  data to be ensured and, more generally, to use and operate it in the same  #
+#  conditions as regards security.                                            #
+#                                                                             #
+#  The fact that you are presently reading this means that you have had       #
+#  knowledge of the CeCILL license and that you accept its terms.             #
+#                                                                             #
+###############################################################################
+
+=head1 NAME
+
+  CracTools::GFF::Annotator - Generic annotation base on CracTools::GFF::Query.pm
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=cut
+
 package CracTools::Annotator;
 
 use strict;
@@ -6,29 +95,8 @@ use warnings;
 use Carp;
 use Data::Dumper;
 use CracTools::GFF::Annotation;
-use CracTools::GFF::Query2;
+use CracTools::GFF::Query;
 use CracTools::Const;
-
-our @type_prot = ('3PRIM_UTR_sense','CDS_sense','5PRIM_UTR_sense','INXON_sense','INTRON_sense','3PRIM_UTR_antisense','CDS_antisense','5PRIM_UTR_antisense','INXON_antisense','INTRON_antisense','INTER_PROXIMAL','INTER_DISTAL_EST','INTER_DISTAL');
-
-our @type_noncoding = ("small_ncRNA","lincRNA","other_lncRNA","other_noncodingRNA");
-
-our %annotation_priority = ($type_prot[0] => 1,
-                            $type_prot[1] => 2,
-                            $type_prot[2] => 3,
-                            $type_prot[3] => 4,
-                            $type_prot[4] => 5,
-                            $type_prot[5] => 6,
-                            $type_prot[6] => 7,
-                            $type_prot[7] => 8,
-                            $type_prot[8] => 9,
-                            $type_prot[9] => 10,
-                            $type_prot[10] => 11,
-                            $type_prot[11] => 12,
-                            $type_prot[12] => 13);
-
-our %priority_annotation = reverse %annotation_priority;
-
 
 =head1 METHODS
 
@@ -63,14 +131,42 @@ sub new {
   return $self;
 }
 
+=head2 foundSameGene
+
+  Arg [1] : String - chr
+  Arg [2] : String - pos_start1
+  Arg [3] : String - pos_end1
+  Arg [4] : String - pos_start2
+  Arg [5] : String - pos_end1
+  Arg [6] : String - strand
+
+  Description : Return true if a gene is found between [pos_start1.pos_end1] and
+                [pos_start2,pos_end2]
+  ReturnType  : Boolean
+  Exceptions  : none
+
+=cut
+
 sub foundSameGene {
   my $self = shift;
   my ($chr,$pos_start1,$pos_end1,$pos_start2,$pos_end2,$strand) = @_;
-  my ($candidates1_ref,$genes1_ref) = $self->_getAnnotationCandidates($chr,$pos_start1,$pos_end1,$strand);
-  my ($candidates2_ref,$genes2_ref) = $self->_getAnnotationCandidates($chr,$pos_start2,$pos_end2,$strand);
+  my @candidates1 = $self->getAnnotationCandidates($chr,$pos_start1,$pos_end1,$strand);
+  my @candidates2 = $self->getAnnotationCandidates($chr,$pos_start2,$pos_end2,$strand);
   my $found_same_gene = 0;
-  foreach my $gene_key (keys %{$genes1_ref}) {
-    if(defined $genes2_ref->{$gene_key}) {
+  my @genes1;
+  my @genes2;
+  foreach my $candi1 (@candidates1) {
+    if(defined $candi1->{gene}) {
+      push @genes1,$candi1->{gene}->attribute('ID');
+    }
+  }
+  foreach my $candi2 (@candidates2) {
+    if(defined $candi2->{gene}) {
+      push @genes2,$candi2->{gene}->attribute('ID');
+    }
+  }
+  foreach my $gene_id (@genes1) {
+    if($gene_id ~~ @genes2) {
       $found_same_gene = 1;
       last;
     }
@@ -78,273 +174,164 @@ sub foundSameGene {
   return $found_same_gene;
 }
 
-# TODO add error handles in case GFF3 doesnt have required informations
-sub getAnnotation {
+=head2 getBestAnnotationCandidate
+
+  Arg [1] : String - chr
+  Arg [2] : String - pos_start
+  Arg [3] : String - pos_end
+  Arg [4] : String - strand
+  Arg [5] : (Optional) Subroutine - see C<getCandidatePriorityDefault> for more details
+
+  Description : Return best candidate annotation according to the priorities given
+                by the subroutine in argument.
+  ReturnType  : Hash( feature_name => CracTools::GFF::Annotation, ...)
+
+=cut
+
+sub getBestAnnotationCandidate {
   my $self = shift;
-  my ($chr,$pos_start,$pos_end,$strand) = @_;
+  my ($chr,$pos_start,$pos_end,$strand,$prioritySub) = @_;
 
-  my %annotation;
+  $prioritySub = \&getCandidatePriorityDefault unless defined $prioritySub;
 
-  my ($candidates_ref,$genes_ref) = $self->_getAnnotationCandidates($chr,$pos_start,$pos_end,$strand);
-
-  # First we take a look to annotations on the original strand
-  my ($best_coding_candidate,$best_coding_priority,$non_coding) = (undef,13,undef);
-  foreach my $candidate (values %{$candidates_ref}) {
-    my $flags = $candidate->{flags};
-    if(!defined $candidate->{mRNA}) {
-      print Dumper($candidate);
-      #print $candidate->{exon}->attribute('ID'),"\n";
-    }
-    if($candidate->{mRNA}->attribute('type') =~ /protein_coding/i) {
-      my $candidate_type = $self->_getCandidateType($candidate).'_sense';
-      if($annotation_priority{$candidate_type} < $best_coding_priority) {
-        $best_coding_candidate = $candidate;
-        $best_coding_priority = $annotation_priority{$candidate_type};
-      }
-    } elsif(!defined $non_coding) {
-      $non_coding = $candidate;
-    }
-  }
-
-  # If we haven't found a coding candidate on the original strand
-  # we look to the opposite strand (only for coding candidates)
-  if(!defined $best_coding_candidate) {
-    my ($candidates_opposite_strand_ref,$genes_opposite_strand_ref) = $self->_getAnnotationCandidates($chr,$pos_start,$pos_end,$strand*-1);
-
-    # Merge genes hashes
-    # We have to keep data of the previous one if we have found
-    # A non-coding.
-    @{$genes_ref}{keys %{$genes_opposite_strand_ref}} = values %{$genes_opposite_strand_ref};
-
-    foreach my $candidate (values %{$candidates_opposite_strand_ref}) {
-      my $flags = $candidate->{flags};
-      if($candidate->{mRNA}->attribute('type') =~ /protein_coding/i) {
-        my $candidate_type = $self->_getCandidateType($candidate).'_antisense';
-        if($annotation_priority{$candidate_type} < $best_coding_priority) {
-          $best_coding_candidate = $candidate;
-          $best_coding_priority = $annotation_priority{$candidate_type};
-        }
+  my @candidates = $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand);
+  my ($best_priority,$best_candidate,$best_type);
+  foreach my $candi (@candidates) {
+    my ($priority,$type) = $prioritySub->($pos_start,$pos_end,$candi);
+    if($priority != -1) {
+      if(!defined $best_priority || $priority < $best_priority) {
+        $best_priority = $priority;
+        $best_candidate = $candi;
+        $best_type = $type;
       }
     }
   }
-
-  # If we haven't found a coding candidate neither on the original
-  # strand nor on the opposite strand, we try looking with a wider
-  # window.
-  if(!defined $best_coding_candidate && $self->neighborhoodSearch) {
-    my $distance_max = $self->distanceMax();
-    my $intergenic_threshold = $self->intergenicThreshold();
-
-    # First we look on the 5PRIM_UTR side
-    my ($candidates_5prim_utr_ref,$genes_5prim_utr_ref) = $self->_getAnnotationCandidates($chr,$pos_start - $distance_max,$pos_start-1,$strand);
-
-    my $best_5prim_utr_candidate_distance = $distance_max;
-    my $best_5prim_utr_candidate;
-
-    foreach my $candidate (values %{$candidates_5prim_utr_ref}) {
-      my $mRNA = $candidate->{mRNA};
-      # We have found a closer gene
-      my $gene_distance = $pos_start - $mRNA->end;
-      if($gene_distance < $best_5prim_utr_candidate_distance && $gene_distance > 0) {
-        $best_5prim_utr_candidate = $candidate;
-        $best_5prim_utr_candidate_distance = $gene_distance; 
-      }
-    }
-
-    # Then we look on the 3PRIM_UTR side
-    my ($candidates_3prim_utr_ref,$genes_3prim_utr_ref) = $self->_getAnnotationCandidates($chr,$pos_end+1,$pos_end+$distance_max,$strand);
-
-    my $best_3prim_utr_candidate_distance = $distance_max;
-    my $best_3prim_utr_candidate;
-
-    foreach my $candidate (values %{$candidates_3prim_utr_ref}) {
-      my $mRNA = $candidate->{mRNA};
-      # We have found a closer gene
-      my $gene_distance = $mRNA->start - $pos_end;
-      if($gene_distance < $best_3prim_utr_candidate_distance && $gene_distance > 0) {
-        $best_3prim_utr_candidate = $candidate;
-        $best_3prim_utr_candidate_distance = $gene_distance; 
-      }
-    }
-
-    # If we are on the reverse strand we swap 5prim_utr and 3prim_utr
-    # candidates.
-    if($strand == -1) {
-      ($best_3prim_utr_candidate_distance,$best_5prim_utr_candidate_distance) = ($best_5prim_utr_candidate_distance,$best_3prim_utr_candidate_distance);
-      ($best_3prim_utr_candidate,$best_5prim_utr_candidate) = ($best_5prim_utr_candidate,$best_3prim_utr_candidate);
-      ($genes_3prim_utr_ref,$genes_5prim_utr_ref) = ($genes_5prim_utr_ref,$genes_3prim_utr_ref);
-    }
-
-    # Now we fill the annotation hash with the bests 3prim_utr
-    # and 5prim_utr candidates
-    if(defined $best_3prim_utr_candidate) {
-      my $mRNA = $best_3prim_utr_candidate->{mRNA};
-      my $gene = $genes_3prim_utr_ref->{$mRNA->attribute('Parent')};
-      $annotation{hugo_3prim} = $gene->attribute('Name');
-      $annotation{desc_3prim} = $mRNA->attribute('type');
-      $annotation{id_3prim} = $gene->attribute('ID');
-      $annotation{distance_of_3prim_gene} = $best_3prim_utr_candidate_distance;
-    }
-
-    if(defined $best_5prim_utr_candidate) {
-      my $mRNA = $best_5prim_utr_candidate->{mRNA};
-      my $gene = $genes_5prim_utr_ref->{$mRNA->attribute('Parent')};
-      $annotation{hugo_5prim} = $gene->attribute('Name');
-      $annotation{desc_5prim} = $mRNA->attribute('type');
-      $annotation{id_5prim} = $gene->attribute('ID');
-      $annotation{distance_of_5prim_gene} = $best_5prim_utr_candidate_distance;
-    }
-
-    # If we are close (according to the 'intergenic_threshold) to the 3prim UTR
-    # of a gene we have an INTER_PROXIMAL priority.
-    # Either we are in an intergenic zone.
-    if(defined $best_5prim_utr_candidate && $best_5prim_utr_candidate_distance <= $intergenic_threshold) {
-      $best_coding_priority = $annotation_priority{INTER_PROXIMAL};
-    } else {
-      $best_coding_priority = $annotation_priority{INTER_DISTAL};
-    }
-  }
-
-  # We fill the annotation hash with best candidates data
-  $annotation{annot} = $priority_annotation{$best_coding_priority};
-  $annotation{priority} = $best_coding_priority;
-  if(defined $best_coding_candidate) {
-    my $mRNA = $best_coding_candidate->{mRNA};
-    my $gene = $genes_ref->{$mRNA->attribute('Parent')};
-    my $exon =  $best_coding_candidate->{exon};
-    $annotation{hugo} = $gene->attribute('Name');
-    $annotation{id} = $gene->attribute('ID');
-    $annotation{desc} = $mRNA->attribute('type');
-    if(defined $exon) {
-      $annotation{exon} = $exon;
-    }
-  }
-  if(defined $non_coding) {
-    my $mRNA_non_coding = $non_coding->{mRNA};
-    my $gene_non_coding = $genes_ref->{$mRNA_non_coding->attribute('Parent')};
-    $annotation{hugo_non_coding} = $gene_non_coding->attribute('Name');
-    $annotation{id_non_coding} = $gene_non_coding->attribute('ID');
-    $annotation{desc_non_coding} = $mRNA_non_coding->attribute('type');
-  }
-
-  # TEST printing annotation hash key/values
-  #while(my ($k,$v) = each %annotation) {
-  #  print "$k => $v\n";
-  #}
-
-  # Return a reference to the annotation hash
-  return \%annotation;
+  return $best_candidate,$best_priority,$best_type;
 }
 
-sub distanceMax {
-  my $self = shift;
-  my $distance_max = shift;
-  if(defined $distance_max) {
-    $self->{DISTANCE_MAX} = $distance_max;
-  }elsif(!defined $self->{DISTANCE_MAX}) {
-    $self->{DISTANCE_MAX} = $CracTools::Const::ANNOTATION_DISTANCE_MAX;
-  }
-  return $self->{DISTANCE_MAX};
-}  
+=head2 getBestAnnotationCandidate
 
-sub intergenicThreshold {
-  my $self = shift;
-  my $intergenic_threshold = shift;
-  if(defined $intergenic_threshold) {
-    $self->{INTERGENIC_THRESHOLD} = $intergenic_threshold;
-  }elsif(!defined $self->{INTERGENIC_THRESHOLD}) {
-    $self->{INTERGENIC_THRESHOLD} = $CracTools::Const::INTERGENIC_THRESHOLD;
-  }
-  return $self->{INTERGENIC_THRESHOLD};
-}  
+  Arg [1] : String - chr
+  Arg [2] : String - pos_start
+  Arg [3] : String - pos_end
+  Arg [4] : String - strand
 
-sub neighborhoodSearch {
-  my $self = shift;
-  my $neighborhood_search = shift;
-  if(defined $neighborhood_search) {
-    $self->{NEIGHBORHOOD_SEARCH} = $neighborhood_search;
-  }elsif(!defined $self->{NEIGHBORHOOD_SEARCH}) {
-    $self->{NEIGHBORHOOD_SEARCH} = $CracTools::Const::NEIGHBORHOOD_SEARCH;
-  }
-  return $self->{NEIGHBORHOOD_SEARCH};
-}
+  Description : Return an array with all annotation candidates overlapping the
+                chromosomic region.
+  ReturnType  : Array of Hash( feature_name => CracTools::GFF::Annotation, ...)
 
-sub _init {
-  my $self = shift;
+=cut
 
-  # Create a GFF file to query exons
-  my $gff_query = CracTools::GFF::Query2->new($self->{gff_file});
-  $self->{gff_query} = $gff_query;
-
-}
-
-
-sub _getAnnotationCandidates {
+sub getAnnotationCandidates {
   my $self = shift;
   my ($chr,$pos_start,$pos_end,$strand) = @_;
 
   # get GFF annotations that overlap the region to annotate
   my $annotations = $self->{gff_query}->fetchByRegion($chr,$pos_start,$pos_end,$strand);
 
-  my %candidates;
-  my %genes;
+  my %annot_hash = ();
+  my @candidates = ();
 
+  # Construct annotation hash with annot ID as key
   foreach my $annot_line (@{$annotations}) {
     my $annot = CracTools::GFF::Annotation->new($annot_line,'gff3');
-    my $annot_priority = 0; 
-    if(defined $annot->feature) {
-      if ($annot->feature =~ /exon/i) {
-        # An exon can have multiple Parents
-        my @parents = $annot->parents();
-        foreach my $parent (@parents) {
-          $candidates{$parent}{exon} = $annot;
-          if($annot->start <= $pos_start && $annot->end >= $pos_end) {
-            $candidates{$parent}{flags} += 1;
+    $annot_hash{$annot->attribute('ID')} = $annot;
+  }
+
+  # Find root in annotation tree
+  foreach my $annot_id (keys %annot_hash) {
+    my @parents = $annot_hash{$annot_id}->parents;
+
+    # we have foud a root, lets constructs candidates
+    if(scalar @parents == 0) {
+      push @candidates, _constructCandidate($annot_id,my $new_candidate,\%annot_hash);
+    }
+  }
+
+  return @candidates;
+}
+
+=head2 getCandidatePriorityDefault
+
+  Arg [1] : String - pos_start
+  Arg [2] : String - pos_end
+  Arg [3] : hash - candidate
+
+  Description : Default method used to give a priority to a candidate.
+                You can create your own priority method to fit your specific need
+                for selecting the best annotation.
+                The best priority is 0. A priority of -1 means that this candidate
+                should be avoided.
+  ReturnType  : ($priority,$type)
+
+=cut
+
+sub getCandidatePriorityDefault {
+  my ($pos_start,$pos_end,$candidate) = @_;
+  my ($priority,$type) = (-1,'');
+  my ($mRNA,$exon) = ($candidate->{mRNA},$candidate->{exon});
+  if(defined $mRNA) {
+    if($mRNA->attribute('type') =~ /protein_coding/i) {
+      if(defined $exon) {
+        if($exon->start > $pos_start || $exon->end < $pos_end) {
+          $priority = 1;
+          if(defined $candidate->{three}) {
+            $type = '3PRIM_UTR';
+          } elsif(defined $candidate->{five}) {
+            $type = '5PRIM_UTR';
+          } elsif(defined $candidate->{cds}) {
+            $type = 'CDS';
           } else {
-            $candidates{$parent}{flags} += 2;
+            $type = 'EXON';
           }
+        } else {
+          $priority = 2;
+          $type = 'INXON';
         }
-      } elsif($annot->feature =~ /five/i) {
-        $candidates{$annot->attribute('Parent')}{flags} += 4; 
-        $candidates{$annot->attribute('Parent')}{five} = $annot;
-      } elsif($annot->feature =~ /three/i) {
-        $candidates{$annot->attribute('Parent')}{three} = $annot;
-        $candidates{$annot->attribute('Parent')}{flags} += 8; 
-      } elsif($annot->feature =~ /cds/i) {
-        $candidates{$annot->attribute('Parent')}{cds} = $annot;
-        $candidates{$annot->attribute('Parent')}{flags} += 16; 
-      } elsif($annot->feature =~ /mRNA/i) {
-        $candidates{$annot->attribute('ID')}{flags} += 32; 
-        $candidates{$annot->attribute('ID')}{mRNA} = $annot; 
-      } elsif($annot->feature =~ /gene/i) {
-        $genes{$annot->attribute('ID')} = $annot; 
+      }
+    } else {
+      if(defined $exon) {
+        if($exon->start > $pos_start || $exon->end < $pos_end) {
+          $priority = 3;
+          $type = 'NON_CODING';
+        }
       }
     }
   }
-  return (\%candidates,\%genes);
+  return ($priority,$type);
 }
 
-sub _getCandidateType {
+=head1 PRIVATE METHODS
+
+=head2 _init
+
+=cut
+
+sub _init {
   my $self = shift;
-  my $candidate_ref = shift;
-  my $flags = $candidate_ref->{flags};
-  my $candidate_type;
-  if ($flags & 1) {
-    if ($flags & 16) {
-      $candidate_type = 'CDS';
-    } elsif ($flags & 4) {
-      $candidate_type = '5PRIM_UTR';
-    } elsif ($flags & 8) {
-      $candidate_type = '3PRIM_UTR';
-    } else {
-      # TODO what do we do?
-      # CDS is just for now
-      $candidate_type = 'CDS';
-    }
-  } elsif ($flags & 2) {
-    $candidate_type = 'INXON';
-  } else {
-    $candidate_type = 'INTRON';
-  }
-  return $candidate_type;
+
+  # Create a GFF file to query exons
+  my $gff_query = CracTools::GFF::Query->new($self->{gff_file});
+  $self->{gff_query} = $gff_query;
+
 }
+
+=head2 _constructCandidate
+
+=cut
+
+sub _constructCandidate {
+  my ($annot_id,$candidate,$annot_hash) = @_;
+  $candidate->{$annot_hash->{$annot_id}->feature} = $annot_hash->{$annot_id};
+  foreach my $annot (values %{$annot_hash}) {
+    my @parents = $annot->parents;
+    foreach my $parent (@parents) {
+      if($parent eq $annot_id) {
+        _constructCandidate($annot->attribute('ID'),$candidate,$annot_hash);
+      }
+    }
+  }
+  return $candidate;
+}
+
+1;

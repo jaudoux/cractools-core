@@ -112,8 +112,9 @@ package CracTools::GFF::Query;
 use strict;
 use warnings;
 
-use Storable; # for persistency
+#use Storable; # for persistency
 
+use Set::IntervalTree;
 use Fcntl qw( SEEK_SET );
 use Carp;
 
@@ -135,28 +136,13 @@ sub new {
 
   my $gff_file = shift;
 
-  if(-e "$gff_file.index" && (stat "$gff_file.index")[9] > (stat $gff_file)[9]) {
-    #carp "Loading gff_file from index";
-    return retrieve("$gff_file.index");
-  } else {
-    my $self = bless {
-      GFF_FILE => $gff_file,
-    }, $class;
+  my $self = bless {
+    GFF_FILE => $gff_file,
+  }, $class;
 
-    $self->_init();
+  $self->_init();
 
-    return $self;
-  }
-}
-
-sub DESTROY {
-  my $self = shift;
-  store($self, $self->gffFile.".index");
-}
-
-sub dumpFilename {
-  my $self = shift;
-  return $self->gffFile.".gffQueryDump";
+  return $self;
 }
 
 =head2 fetchByRegion
@@ -182,25 +168,15 @@ sub fetchByRegion {
   my ($self,$chr,$pos_start,$pos_end,$strand) = @_;
   my $annotations_ref = $self->_getAnnotations($chr,$strand);
 
-  # Annotations keys sliced with starts values smaller or equal to positon
-  my $starts_sorted_slice = $self->_getAnnotationKeysSubset($chr,$strand,'start',$pos_end,'lower');
+  # pos_start -1 beacause Interval tree use [a,b) intervals
+  my $seek_values = $self->_getAnnotations($chr,$strand)->fetch($pos_start-1,$pos_end);
 
-  # Annotations keys sliced with ends values greater or equal to positon
-  my $ends_sorted_slice = $self->_getAnnotationKeysSubset($chr,$strand,'end',$pos_start,'upper');
-
-  # We get the intersection between start keys and end_keys
-  my %original = ();
-  my @isect = ();
-   
-  map { $original{$_} = 1 } @{$starts_sorted_slice};
-  @isect = grep { $original{$_} } @{$ends_sorted_slice};
-
-  open(IN,$self->{GFF_FILE}) or die ("Cannot open file ".$self->{GFF_FILE});
+  my $gff_fh = $self->_gffFilehandle;
 
   my @gff_lines;
-  foreach my $key (@isect) {
-    seek(IN,$annotations_ref->{$key}{seek},SEEK_SET);
-    my $annot = <IN>;
+  foreach (@$seek_values) {
+    seek($gff_fh,$_,SEEK_SET);
+    my $annot = <$gff_fh>;
     push(@gff_lines,$annot);
   }
 
@@ -234,6 +210,11 @@ sub gffFile {
   return $self->{GFF_FILE};
 }
 
+sub _gffFilehandle {
+  my $self = shift;
+  return $self->{gff_fh};
+}
+
 sub _init {
   my $self = shift;
   my %annotations;
@@ -242,33 +223,34 @@ sub _init {
     confess "Missing GFF file argument";
   }
 
-  open(IN,$self->{GFF_FILE}) or croak ("Cannot open file ".$self->{GFF_FILE});
+  open(IN,$self->{GFF_FILE}) or die ("Cannot open file ".$self->{GFF_FILE});
 
-  my $line_cpt = 0;
   my $curr_pos = tell(IN);
   while(<IN>) {
     # skip headers
     if($_ =~ /^#/) {
       next;
     }
+    my $pos = $curr_pos;
     my ($chr,$source,$feature,$start,$end,$score,$strand) = split("\t",$_,8);
-    # Get the strand if 1/-1 format
-    $strand = convertStrand($strand);
-    if (defined $chr) {
-      $annotations{$self->_getAnnotationHashKey($chr,$strand)}{$line_cpt} = {start => $start, end => $end, seek => $curr_pos};
-      $line_cpt++;
+    if(defined $start && defined $end && defined $chr && defined $strand) {
+      $strand = convertStrand($strand);
+      my $key = $self->_getAnnotationHashKey($chr,$strand);
+      if(!defined $annotations{$key}) {
+        $annotations{$key} = Set::IntervalTree->new;
+      }
+      # Minus one because gff is 1-based
+      $annotations{$key}->insert($pos,$start-1,$end);
     }
     $curr_pos = tell(IN);
   }
+  close IN;
 
+  my $gff_fh;
+  open($gff_fh,$self->{GFF_FILE}) or die ("Cannot open file ".$self->{GFF_FILE});
+
+  $self->{gff_fh} = $gff_fh;
   $self->{ANNOTATIONS} = \%annotations;
-
-  #Init Annotations sorted keys
-  #foreach my $annot_key (keys %annotations) {
-  #  my ($chr,$strand) = $self->_extractAnnotationHashKey($annot_key);
-  #  $self->_getAnnotationKeysSorted($chr,$strand,'start');
-  #  $self->_getAnnotationKeysSorted($chr,$strand,'end');
-  #}
 
 }
 
@@ -289,67 +271,6 @@ sub _getAnnotations {
   return $self->{ANNOTATIONS}{$self->_getAnnotationHashKey($chr,$strand)};
 }
 
-sub _getAnnotationKeysSorted {
-  my ($self,$chr,$strand,$sort_attribute) = @_;
-  my $annotation_hash_key = $self->_getAnnotationHashKey($chr,$strand);
-  my $annotation_keys_sorted_ref = $self->{ANNOTATION_KEYS_SORTED}{$annotation_hash_key}{$sort_attribute};
-
-  if (!defined $annotation_keys_sorted_ref) {
-    my $annotations_ref = $self->_getAnnotations($chr,$strand);
-    my @annotation_keys_sorted = sort { $annotations_ref->{$a}{$sort_attribute} <=> $annotations_ref->{$b}{$sort_attribute} } keys %{$annotations_ref};
-    $annotation_keys_sorted_ref = \@annotation_keys_sorted;
-    $self->{ANNOTATION_KEYS_SORTED}{$annotation_hash_key}{$sort_attribute} = $annotation_keys_sorted_ref;
-  }
-  return $annotation_keys_sorted_ref;
-}
-
-sub _getAnnotationKeysSubset {
-  my ($self,$chr,$strand,$sort_attribute,$boundary_value,$subset_type) = @_;
-
-  my $annotations_ref = $self->_getAnnotations($chr,$strand);
-  my $annotation_keys_ref = $self->_getAnnotationKeysSorted($chr,$strand,$sort_attribute);
-
-  my ($l, $u) = (0, @{$annotation_keys_ref} - 1);  # lower, upper end of search interval
-  my ($i,$v);
-  while ($l <= $u) {
-    $i = int(($l + $u) / 2);
-    $v = $annotations_ref->{$annotation_keys_ref->[$i]}{$sort_attribute};
-    if($subset_type eq 'lower') {
-      if($v <= $boundary_value) {
-        $l = $i + 1;
-      } else {
-        $u = $i - 1;
-      }
-    } else {
-      if($v >= $boundary_value) {
-        $u = $i - 1;
-      } else {
-        $l = $i + 1;
-      }
-    }
-  }
-  if($subset_type eq 'lower') {
-    if(defined $v) {
-      # Adjust pivot in case we have gone to far
-      if($v > $boundary_value) {
-        $i--;
-      }
-      return sub { \@_ }->( @{$annotation_keys_ref}[0 .. $i] );
-    } else {
-      return [];
-    }
-  } elsif($subset_type eq 'upper') {
-    if(defined $v) {
-      # Adjust pivot in case we have gone to far
-      if(defined $v && $v < $boundary_value) {
-        $i++;
-      }
-      return sub { \@_ }->( @{$annotation_keys_ref}[$i .. (@{$annotation_keys_ref} - 1)] );
-    } else {
-      return [];
-    }
-  }
-}
 
 sub convertStrand($) {
   my $strand = shift;

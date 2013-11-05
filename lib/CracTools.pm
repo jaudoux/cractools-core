@@ -79,7 +79,7 @@
 
 package CracTools;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 our $PACKAGE_NAME = "CracTools";
 
