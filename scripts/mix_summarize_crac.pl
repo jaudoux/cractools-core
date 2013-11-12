@@ -21,6 +21,7 @@ Option : -o output_file_name
 This script will create a report with statistic data.
 The options are:
 	-globalonly		- Show only global mapping values
+	-explainedsonly		- Show only explained mapping values
 	-output filename	- the filename the stats are written (STDOUT by default)
 #	-graph name					- output graph also with filename name [default= libname.graph.png]
 	-namecolumns 'columns header'		- Split filename with /-/, and set header columns (ex: Exp-Nb-lib)
@@ -60,12 +61,14 @@ my %patterns = (
 my $extension='';
 my $sumonly = 0;
 my $globalonly = '';
+my $explainedonly = '';
 my $namecolumns = '';
 my $separator = '-';
 
 GetOptions(
 	'output:s'	=> \$output,
 	'globalonly' => \$globalonly,
+	'explainedonly' => \$explainedonly,
 	'namecolumns:s' => \$namecolumns,
 	'separator:s' => \$separator,
 	'verbose:i'		=> \$verbose,
@@ -120,7 +123,6 @@ foreach my $file (@ARGV) {
 
 #open output files
 my ($file_output, $output_dir) = ('output', '');
-# global summary
 my $fhout;
 if (defined $output) {
 	($file_output, $output_dir) = fileparse($output);
@@ -156,7 +158,10 @@ foreach my $file (sort keys %reads) {
 }
 
 foreach my $type (keys %out) {
+  # global summary
 	next if ($globalonly and $type ne 'global');
+  # explained summary
+	next if ($explainedonly and $type ne 'explained');
 	print $fhout '# ', uc($type), " data\n", $out{$type}{'header'}, $out{$type}{'data'} ;
 }
 
