@@ -112,6 +112,7 @@ use warnings;
 
 use File::Basename;
 use CracTools;
+use CracTools::Const;
 
 use constant DEFAULT_SEP => "\t";
 
@@ -187,7 +188,7 @@ sub printLine {
   my $self = shift;
   for(my $cpt = 0; $cpt < scalar @_; $cpt++) {
     if(!defined $_[$cpt]) {
-      $_[$cpt] = 'NONE';
+      $_[$cpt] = $CracTools::Const::NOT_AVAILABLE;
     }
   }
   $self->printlnOutput(join($self->{sep},@_));
