@@ -94,7 +94,7 @@ Usage:
 
   foreach my $gff_line (@annotations) {
     my $annotation = CracTools::GFF::Annotation->new($gff_line);
-    print "Gene_id : ",$annotation->getAttribute('gene_id'),"\n";
+    print "Gene_id : ",$annotation->attribute('gene_id'),"\n";
   }
 
 =head1 DESCRIPTION
