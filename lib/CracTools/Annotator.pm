@@ -184,7 +184,7 @@ sub foundSameGene {
 
   Description : Return best candidate annotation according to the priorities given
                 by the subroutine in argument.
-  ReturnType  : Hash( feature_name => CracTools::GFF::Annotation, ...)
+  ReturnType  : Hash( feature_name => CracTools::GFF::Annotation, ...), Int(priority), String(type)
 
 =cut
 
