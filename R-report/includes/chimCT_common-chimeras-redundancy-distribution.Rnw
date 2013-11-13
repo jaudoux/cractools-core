@@ -1,0 +1,4 @@
+<<fig.height=4,fig.width=10>>=
+ggplot(dat,aes(factor(Freq_Name),fill=factor(Class))) +
+geom_bar()
+@

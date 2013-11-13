@@ -1,0 +1,22 @@
+<<>>=
+# Reorder data by Chimera_freq and Sample_freq
+dat$Name <- reorder(dat$Name,dat$Freq_Name)
+dat$Sample <- reorder(dat$Sample,dat$Freq_Sample)
+@
+
+<<fig.height=14,fig.width=10,results="asis">>=
+for(i in sort(unique(dat$Class))) {
+  cat("\\subsection{Class ")
+  cat(i)
+  cat("}")
+  sub <- subset(dat,Class==i & Rank>80 & Cover < 3000 & Cover > 200)
+  #sub <- subset(dat,Class==i)
+
+  print(ggplot(sub,aes(Sample,Name)) + 
+  geom_point(aes(size = Cover, colour=Rank)) + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
+  scale_size(range =c(1,5)) + 
+  scale_color_gradient(low="red",high="blue") +
+  facet_grid(Freq_Name ~ ., scales = "free", space = "free"))
+}
+@

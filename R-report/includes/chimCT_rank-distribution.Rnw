@@ -1,0 +1,3 @@
+<<fig.height=4,fig.width=10>>=
+ggplot(dat,aes(factor(Rank),fill=factor(Class))) + geom_bar() + scale_x_discrete(limits = rev(levels(factor(dat$Rank)))) + labs(fill = "Class") + xlab("Rank")
+@

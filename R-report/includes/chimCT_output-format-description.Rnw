@@ -1,0 +1,27 @@
+This is a description of the format used to output analysed chimeras. Each line correspond to a uniq chimera
+identified and annotated by the chimeraPipeline. Chimeras are ordered by Score, then class and number
+of spanning reads.
+
+This format is composed by 13 mandatory fields TAB-separeted. This is an home-made format, because there is
+no standard format that is able to store chimeras coordinates and related informations.
+
+\begin{enumerate}
+
+\item \textbf{Id}                            - A Uniq Id for each chimera. This id is composed by \texttt{sample\_name:chimera id}.
+\item \textbf{Name}                          - Fusion genes names separated by three dashes ('---')
+\item \textbf{Chr1}                          - Chromosome of the 5' part of the chimera
+\item \textbf{Pos1}                          - Genomic positions of the 5' part of the chimera
+\item \textbf{Strand1}                       - Genomic strand of the 5' part of the chimera. If sample is not \texttt{--stranded}
+                                            No assumption can be made about the strand
+\item \textbf{Chr2}                          - Chromosome of the 3' part of the chimera. Same as \textit{Chr2}, unless it is a class 1 chimera (translocation).
+\item \textbf{Pos2}                          - Genomic positions of the 3' part of the chimera
+\item \textbf{Strand2}                       - Genomic strand of the 3' part of the chimera. If sample is not \texttt{--stranded}
+                                            No assumption can be made about the strand
+\item \textbf{Rank}                          - Rank based on confidence about chimera's positivity (add more details)
+\item \textbf{Spanning\_junction\_normalized}  - Spaning junction reads coverage (normalized per billion of reads). A spanning junction read is the read that contains
+                                 the chimeric junction.
+\item \textbf{Spanning\_PE\_normalized}        - Coverage of paired-end reads (normalized per billion of reads) that contains the chimeric junction in the non-sequenced part.
+\item \textbf{Class}                         - Chimeric class from 1 to 4. (add more details)
+\item \textbf{Comments}                      - Free comments about the chimera. This field try to explain textualy the "Rank" value given
+                                            for the chimera.
+\item \textbf{Others}                        - This last fields are dedicated to additional informations. They are based one the \{Key='value'\} paradigm.\end{enumerate}

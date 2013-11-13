@@ -1,0 +1,41 @@
+\documentclass[a4paper]{article}
+\usepackage[a4paper, margin=20mm]{geometry}
+\usepackage[utf8x]{inputenc}
+\usepackage{xspace}
+\usepackage{tikz}
+\usepackage{adjustbox}
+\usepackage{tabularx}
+\usepackage{longtable}
+
+\newcommand{\GA}{an Illumina GA\xspace}
+\newcommand{\nbsamples}{44\xspace}
+
+
+\title{\textsc{}}
+\author{J. Audoux, A. Boureux, F. Ruffle, T. Commes and N. Philippe}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+<<child1, child='crac-general.Rtex' >>=
+# set general options
+opts_chunk$set(cache=FALSE, echo=FALSE)
+#dev='tikz', fig.width=5, fig.height=5, fig.align='center', error=FALSE)
+@
+
+
+
+
+<<child2, child='commonChimeras-report.Rnw' >>=
+
+# set general options
+opts_chunk$set(cache=FALSE, echo=FALSE)
+#dev='tikz', fig.width=5, fig.height=5, fig.align='center', error=FALSE)
+@
+
+
+\end{document}

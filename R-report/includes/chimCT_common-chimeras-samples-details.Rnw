@@ -1,0 +1,8 @@
+The table below presents the samples details that have be used to perform the search of redundant chimeras.
+
+<<results="asis">>=
+summary <- ddply(dat, .(Sample), summarize, nb_redundant_chimeras=length(Sample), cover=sum(Cover))
+tab <- xtable(summary)
+
+print(tab,tabular.environment='longtable',floating=FALSE)
+@

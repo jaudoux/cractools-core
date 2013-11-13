@@ -1,0 +1,10 @@
+These are the best chimeric candidates (within a Rank equal to 100), they can
+be found in the csv file produced by chimCT with more details (see Output
+format section).
+
+<<results="asis">>=
+best <- subset(dat,Rank==100)
+tab <- xtable(best[c("Name","Class","Rank","Spanning_junction","Spanning_PE")])
+
+print(tab,tabular.environment='longtable',floating=FALSE)
+@

@@ -1,0 +1,5 @@
+The chimCT is a tool for both annotating and formating chimera
+produced by CRAC software as well as computing a score of beauty for each
+chimera and sort them using this criteria.
+
+Here we present a statistical report generated from an outout of chimCT (format described in the folowing section).

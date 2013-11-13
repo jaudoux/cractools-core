@@ -1,0 +1,78 @@
+
+<<setupi, results="hide", echo=FALSE, message=FALSE >>=
+library(knitr)
+library(xtable)
+library(ggplot2)
+library(reshape2)
+# set general options
+opts_chunk$set(cache=FALSE, echo=FALSE)
+#dev='tikz', fig.width=5, fig.height=5, fig.align='center', error=FALSE)
+@
+
+\section{Introduction}
+
+This report describes the transcriptome analysis performed on
+\nbsamples samples sequenced on \GA next-generation sequencer. Each
+sample is renamed using the following nomenclature:
+% AML_[normal,abnormal,unknown]_[BM,PBMC]_n[1,...,45]_[1,2].fastq 
+\begin{enumerate}
+\item AML for the leukemia type
+\item the karyotype (either normal,abnormal or unknown)
+\item cell type (either BM or PBMC)
+\item patient number from Wang et al. (2012) paper
+\item pair: 1 = first, 2 = second
+\end{enumerate}
+
+%The sample (AML100405_2/s_3_[1,2]_sequence.txt) was removed from the analysis because the first pair file was truncated (only 511,652 reads instead of 32,673,030 reads in the second pair file).
+The full list is show on table \ref{listrenamed} (page \pageref{listrenamed}).
+
+<<listrenamed, results="asis">>=
+listfile <- read.table("/data/nas/external/wang_rowley_2012/wang_rowley_2012.summary", sep="\t", head=T)
+print(xtable(listfile[,1:3], caption="Old \\& New filename for the \\nbsamples AML samples.", label="listrenamed"))
+@
+
+\section{Step 1: filtering step}
+
+The table \ref{listfiltered} (page \pageref{listfiltered}) shows for each sample the number of reads before and
+after filtration.
+
+<<listfiltered, results="asis">>=
+	listreads<-data.frame(apply(listfile[2:6], 2, function(x) sub('2X','',x)))
+	names(listreads)[1] <- "Patients"
+	listreads$Patients <- gsub('_[1,2].fastq','',listreads$Patients, fixed=T)
+	listreads$Patients <-  gsub('_',' ',listreads$Patients)
+
+	table2 <- xtable(listreads, caption="Number or reads filtered for each pair of files", label="listfiltered")
+	print(table2)
+@
+
+\begin{figure}[h]
+  \centering
+  \caption{Number of reads before and after filtration}
+  \label{fig:renamed}
+
+\end{figure}
+
+<<plotfiltered, results="asis">>=
+	readsmelted = melt(listreads[c("Patients", "nb_reads", "nb_remained")], id=c("Patients"), variable.name="Categories", value.name="Values")
+	readsmelted$Values <- as.numeric(readsmelted$Values)
+	readsmelted = cbind(colsplit(readsmelted$Patients, pattern = ' ', names = c('Leukemia', 'Karyotype', 'Cell_type', 'Patient_number')), readsmelted)
+	print (xtable(table(readsmelted$Karyotype, readsmelted$Cell_type)), floating=FALSE)
+	ggplot(readsmelted, aes(x=Karyotype,y=Values,fill=Categories)) + geom_boxplot()
+@
+
+<<plotfiltered2, results="asis">>=
+	ggplot(readsmelted, aes(x=Cell_type,y=Values,fill=Categories)) + geom_boxplot()
+
+@
+
+<<plotfiltered3, results="asis">>=
+	ggplot(readsmelted, aes(x=Patients,y=Values,fill=Categories))+ geom_bar(stat="identity", position=position_dodge(width = 0.6)) + coord_flip()
+@
+
+\section{Step 2: mapping reads with CRAC}
+
+
+\section{Step 3: chimera analysis with ChimCT}
+
+

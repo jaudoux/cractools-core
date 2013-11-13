@@ -1,0 +1,13 @@
+\begin{minipage}[b]{0.45\linewidth}
+\centering
+<<fig.height=4,fig.width=4>>=
+ggplot(dat,aes(factor(Class),Rank)) + geom_boxplot() + xlab("Class")
+@
+\end{minipage}
+\hspace{0.5cm}
+\begin{minipage}[b]{0.45\linewidth}
+\centering
+<<fig.height=4,fig.width=4>>=
+ggplot(dat,aes(factor(Class),Rank)) + geom_violin() + xlab("class")
+@
+\end{minipage}

@@ -1,0 +1,380 @@
+\documentclass[a4paper]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage[a4paper, margin=20mm]{geometry}
+\usepackage[utf8x]{inputenc}
+\usepackage{xspace}
+\usepackage{tikz}
+\usepackage{adjustbox}
+\usepackage{tabularx}
+\usepackage{longtable}
+
+\newcommand{\GA}{an Illumina GA\xspace}
+\newcommand{\nbsamples}{44\xspace}
+
+
+\title{\textsc{}}
+\author{J. Audoux, A. Boureux, F. Ruffle, T. Commes and N. Philippe}
+\date{\today}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+
+
+
+
+
+\section{Introduction}
+
+This report describes the transcriptome analysis performed on
+\nbsamples samples sequenced on \GA next-generation sequencer. Each
+sample is renamed using the following nomenclature:
+% AML_[normal,abnormal,unknown]_[BM,PBMC]_n[1,...,45]_[1,2].fastq 
+\begin{enumerate}
+\item AML for the leukemia type
+\item the karyotype (either normal,abnormal or unknown)
+\item cell type (either BM or PBMC)
+\item patient number from Wang et al. (2012) paper
+\item pair: 1 = first, 2 = second
+\end{enumerate}
+
+%The sample (AML100405_2/s_3_[1,2]_sequence.txt) was removed from the analysis because the first pair file was truncated (only 511,652 reads instead of 32,673,030 reads in the second pair file).
+The full list is show on table \ref{listrenamed} (page \pageref{listrenamed}).
+
+% latex table generated in R 3.0.0 by xtable 1.7-1 package
+% Fri Oct 25 15:01:13 2013
+\begin{table}[ht]
+\centering
+\begin{tabular}{rlll}
+  \hline
+ & old\_filename & new\_filenames & nb\_reads \\ 
+  \hline
+1 & AML100405\_2/s\_1\_[1,2]\_sequence.txt & AML\_normal\_BM\_n1\_[1,2].fastq & 2X24614703 \\ 
+  2 & AML100405\_2/s\_2\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n7\_[1,2].fastq & 2X30770492 \\ 
+  3 & AML100405\_2/s\_4\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n14\_[1,2].fastq & 2X32629136 \\ 
+  4 & AML100405\_2/s\_5\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n15\_[1,2].fastq & 2X27996366 \\ 
+  5 & AML100405\_2/s\_6\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n16\_[1,2].fastq & 2X30014538 \\ 
+  6 & AML100405\_2/s\_7\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n17\_[1,2].fastq & 2X31305698 \\ 
+  7 & AML100405\_2/s\_8\_[1,2]\_sequence.txt & AML\_normal\_BM\_n5\_[1,2].fastq & 2X27914139 \\ 
+  8 & AML100413\_3/s\_1\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n18\_[1,2].fastq & 2X27985862 \\ 
+  9 & AML100413\_3/s\_2\_[1,2]\_sequence.txt & AML\_normal\_BM\_n6\_[1,2].fastq & 2X15830586 \\ 
+  10 & AML100413\_3/s\_3\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n19\_[1,2].fastq & 2X33253655 \\ 
+  11 & AML100413\_3/s\_4\_[1,2]\_sequence.txt & AML\_unknown\_BM\_n38\_[1,2].fastq & 2X32368840 \\ 
+  12 & AML100413\_3/s\_5\_[1,2]\_sequence.txt & AML\_unknown\_BM\_n39\_[1,2].fastq & 2X22547358 \\ 
+  13 & AML100413\_3/s\_6\_[1,2]\_sequence.txt & AML\_unknown\_PBMC\_n43\_[1,2].fastq & 2X8036353 \\ 
+  14 & AML100413\_3/s\_7\_[1,2]\_sequence.txt & AML\_unknown\_PBMC\_n44\_[1,2].fastq & 2X20728171 \\ 
+  15 & AML100413\_3/s\_8\_[1,2]\_sequence.txt & AML\_unknown\_BM\_n40\_[1,2].fastq & 2X27173669 \\ 
+  16 & AML100713\_5/s\_1\_[1,2]\_sequence.txt & AML\_normal\_BM\_n2\_[1,2].fastq & 2X28843603 \\ 
+  17 & AML100713\_5/s\_2\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n8\_[1,2].fastq & 2X28597393 \\ 
+  18 & AML100713\_5/s\_3\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n9\_[1,2].fastq & 2X29105962 \\ 
+  19 & AML100713\_5/s\_4\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n10\_[1,2].fastq & 2X32766978 \\ 
+  20 & AML100713\_5/s\_5\_[1,2]\_sequence.txt & AML\_normal\_BM\_n3\_[1,2].fastq & 2X31267542 \\ 
+  21 & AML100713\_5/s\_6\_[1,2]\_sequence.txt & AML\_normal\_BM\_n4\_[1,2].fastq & 2X32518678 \\ 
+  22 & AML100713\_5/s\_7\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n11\_[1,2].fastq & 2X28074606 \\ 
+  23 & AML100713\_5/s\_8\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n12\_[1,2].fastq & 2X27129917 \\ 
+  24 & AML101130/s\_1\_[1,2]\_sequence.txt & AML\_normal\_BM\_n21\_[1,2].fastq & 2X34693529 \\ 
+  25 & AML101130/s\_2\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n27\_[1,2].fastq & 2X35331090 \\ 
+  26 & AML101130/s\_3\_[1,2]\_sequence.txt & AML\_abnormal\_BM\_n34\_[1,2].fastq & 2X35780585 \\ 
+  27 & AML101130/s\_5\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n26\_[1,2].fastq & 2X37941973 \\ 
+  28 & AML101130/s\_6\_[1,2]\_sequence.txt & AML\_abnormal\_BM\_n30\_[1,2].fastq & 2X34785818 \\ 
+  29 & AML101130/s\_7\_[1,2]\_sequence.txt & AML\_abnormal\_BM\_n31\_[1,2].fastq & 2X35756006 \\ 
+  30 & AML101130/s\_8\_[1,2]\_sequence.txt & AML\_unknown\_PBMC\_n45\_[1,2].fastq & 2X16064143 \\ 
+  31 & AML101209/s\_1\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n28\_[1,2].fastq & 2X24535864 \\ 
+  32 & AML101209/s\_2\_[1,2]\_sequence.txt & AML\_normal\_BM\_n20\_[1,2].fastq & 2X21676424 \\ 
+  33 & AML101209/s\_3\_[1,2]\_sequence.txt & AML\_normal\_PBMC\_n29\_[1,2].fastq & 2X22140260 \\ 
+  34 & AML101209/s\_5\_[1,2]\_sequence.txt & AML\_abnormal\_BM\_n32\_[1,2].fastq & 2X16978603 \\ 
+  35 & AML101209/s\_6\_[1,2]\_sequence.txt & AML\_abnormal\_BM\_n36\_[1,2].fastq & 2X29058205 \\ 
+  36 & AML101209/s\_7\_[1,2]\_sequence.txt & AML\_normal\_BM\_n22\_[1,2].fastq & 2X20786654 \\ 
+  37 & AML101209/s\_8\_[1,2]\_sequence.txt & AML\_normal\_BM\_n23\_[1,2].fastq & 2X26504532 \\ 
+  38 & AML110509/s\_1\_[1,2]\_sequence.txt & AML\_unknown\_BM\_n41\_[1,2].fastq & 2X44459470 \\ 
+  39 & AML110509/s\_2\_[1,2]\_sequence.txt & AML\_abnormal\_BM\_n33\_[1,2].fastq & 2X46317335 \\ 
+  40 & AML110509/s\_3\_[1,2]\_sequence.txt & AML\_normal\_BM\_n24\_[1,2].fastq & 2X44998831 \\ 
+  41 & AML110509/s\_5\_[1,2]\_sequence.txt & AML\_normal\_BM\_n25\_[1,2].fastq & 2X44645304 \\ 
+  42 & AML110509/s\_6\_[1,2]\_sequence.txt & AML\_abnormal\_BM\_n35\_[1,2].fastq & 2X46815659 \\ 
+  43 & AML110509/s\_7\_[1,2]\_sequence.txt & AML\_unknown\_BM\_n42\_[1,2].fastq & 2X46567887 \\ 
+  44 & AML110509/s\_8\_[1,2]\_sequence.txt & AML\_abnormal\_PBMC\_n37\_[1,2].fastq & 2X44234187 \\ 
+   \hline
+\end{tabular}
+\caption{Old \& New filename for the \nbsamples AML samples.} 
+\label{listrenamed}
+\end{table}
+
+
+
+\section{Step 1: filtering step}
+
+The table \ref{listfiltered} (page \pageref{listfiltered}) shows for each sample the number of reads before and
+after filtration.
+
+% latex table generated in R 3.0.0 by xtable 1.7-1 package
+% Fri Oct 25 15:01:13 2013
+\begin{table}[ht]
+\centering
+\begin{tabular}{rlllll}
+  \hline
+ & Patients & nb\_reads & reads\_length & nb\_filtered & nb\_remained \\ 
+  \hline
+1 & AML normal BM n1 & 24614703 & 49 & 558197 & 24056506 \\ 
+  2 & AML normal PBMC n7 & 30770492 & 49 & 403037 & 30367455 \\ 
+  3 & AML normal PBMC n14 & 32629136 & 49 & 196545 & 32432591 \\ 
+  4 & AML normal PBMC n15 & 27996366 & 49 & 173027 & 27823339 \\ 
+  5 & AML normal PBMC n16 & 30014538 & 49 & 180665 & 29833873 \\ 
+  6 & AML normal PBMC n17 & 31305698 & 49 & 192793 & 31112905 \\ 
+  7 & AML normal BM n5 & 27914139 & 49 & 211278 & 27702924 \\ 
+  8 & AML normal PBMC n18 & 27985862 & 49 & 455044 & 27530818 \\ 
+  9 & AML normal BM n6 & 15830586 & 49 & 23602 & 15806984 \\ 
+  10 & AML normal PBMC n19 & 33253655 & 49 & 114989 & 33138666 \\ 
+  11 & AML unknown BM n38 & 32368840 & 49 & 54853 & 32313987 \\ 
+  12 & AML unknown BM n39 & 22547358 & 49 & 539706 & 22007652 \\ 
+  13 & AML unknown PBMC n43 & 8036353 & 49 & 1712570 & 6323783 \\ 
+  14 & AML unknown PBMC n44 & 20728171 & 49 & 280434 & 20447737 \\ 
+  15 & AML unknown BM n40 & 27173669 & 49 & 67869 & 27105800 \\ 
+  16 & AML normal BM n2 & 28843603 & 50 & 921900 & 27921703 \\ 
+  17 & AML normal PBMC n8 & 28597393 & 50 & 192433 & 28404960 \\ 
+  18 & AML normal PBMC n9 & 29105962 & 50 & 195417 & 28910545 \\ 
+  19 & AML normal PBMC n10 & 32766978 & 50 & 210134 & 32556844 \\ 
+  20 & AML normal BM n3 & 31267542 & 50 & 202139 & 31065403 \\ 
+  21 & AML normal BM n4 & 32518678 & 50 & 210417 & 32308261 \\ 
+  22 & AML normal PBMC n11 & 28074606 & 50 & 184095 & 27890511 \\ 
+  23 & AML normal PBMC n12 & 27129917 & 50 & 177553 & 26952364 \\ 
+  24 & AML normal BM n21 & 34693529 & 50 & 5597158 & 29096371 \\ 
+  25 & AML normal PBMC n27 & 35331090 & 50 & 1459837 & 33871253 \\ 
+  26 & AML abnormal BM n34 & 35780585 & 50 & 1122974 & 34657611 \\ 
+  27 & AML normal PBMC n26 & 37941973 & 50 & 199463 & 37742510 \\ 
+  28 & AML abnormal BM n30 & 34785818 & 50 & 456952 & 34328866 \\ 
+  29 & AML abnormal BM n31 & 35756006 & 50 & 189027 & 35566979 \\ 
+  30 & AML unknown PBMC n45 & 16064143 & 50 & 86696 & 15977447 \\ 
+  31 & AML normal PBMC n28 & 24535864 & 50 & 1698402 & 22837462 \\ 
+  32 & AML normal BM n20 & 21676424 & 50 & 85157 & 21591267 \\ 
+  33 & AML normal PBMC n29 & 22140260 & 50 & 551348 & 21588912 \\ 
+  34 & AML abnormal BM n32 & 16978603 & 50 & 68933 & 16909670 \\ 
+  35 & AML abnormal BM n36 & 29058205 & 50 & 106481 & 28951724 \\ 
+  36 & AML normal BM n22 & 20786654 & 50 & 77044 & 20709610 \\ 
+  37 & AML normal BM n23 & 26504532 & 50 & 118625 & 26385907 \\ 
+  38 & AML unknown BM n41 & 44459470 & 50 & 1496273 & 42963197 \\ 
+  39 & AML abnormal BM n33 & 46317335 & 50 & 2683806 & 43633529 \\ 
+  40 & AML normal BM n24 & 44998831 & 50 & 1143562 & 43855269 \\ 
+  41 & AML normal BM n25 & 44645304 & 50 & 52577 & 44592727 \\ 
+  42 & AML abnormal BM n35 & 46815659 & 50 & 54280 & 46761379 \\ 
+  43 & AML unknown BM n42 & 46567887 & 50 & 436383 & 46131504 \\ 
+  44 & AML abnormal PBMC n37 & 44234187 & 50 & 413760 & 43820427 \\ 
+   \hline
+\end{tabular}
+\caption{Number or reads filtered for each pair of files} 
+\label{listfiltered}
+\end{table}
+
+
+
+\begin{figure}[h]
+  \centering
+  \caption{Number of reads before and after filtration}
+  \label{fig:renamed}
+
+\end{figure}
+
+% latex table generated in R 3.0.0 by xtable 1.7-1 package
+% Fri Oct 25 15:01:13 2013
+\begin{tabular}{rrr}
+  \hline
+ & BM & PBMC \\ 
+  \hline
+abnormal &  14 &   2 \\ 
+  normal &  24 &  32 \\ 
+  unknown &  10 &   6 \\ 
+   \hline
+\end{tabular}
+
+\includegraphics[width=\maxwidth]{figure/plotfiltered} 
+
+
+
+
+\includegraphics[width=\maxwidth]{figure/plotfiltered2} 
+
+
+
+
+\includegraphics[width=\maxwidth]{figure/plotfiltered3} 
+
+
+
+\section{Step 2: mapping reads with CRAC}
+
+
+\section{Step 3: chimera analysis with ChimCT}
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Introduction}
+
+\section{Samples details}
+The table below presents the samples details that have be used to perform the search of redundant chimeras.
+
+% latex table generated in R 3.0.0 by xtable 1.7-1 package
+% Fri Oct 25 15:01:15 2013
+\begin{longtable}{rlrr}
+  \hline
+ & Sample & nb\_redundant\_chimeras & cover \\ 
+  \hline
+1 & om100011\_stranded & 120 & 85841 \\ 
+  2 & om110223\_stranded & 144 & 168425 \\ 
+  3 & os100380 & 123 & 235932 \\ 
+  4 & os110089\_stranded &  82 & 321798 \\ 
+   \hline
+\hline
+\end{longtable}
+
+
+
+\section{General statistics}
+
+\subsection{Class distribution}
+
+\begin{minipage}[b]{0.45\linewidth}
+\centering
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-5} 
+
+}
+
+
+
+\end{knitrout}
+
+
+\end{minipage}
+\hspace{0.5cm}
+\begin{minipage}[b]{0.45\linewidth}
+\centering
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/unnamed-chunk-6} 
+
+}
+
+
+
+\end{knitrout}
+
+
+\end{minipage}
+
+
+\subsection{Ranks dispersion}
+
+\begin{minipage}[b]{0.45\linewidth}
+\centering
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-7} 
+
+\end{knitrout}
+
+\end{minipage}
+\hspace{0.5cm}
+\begin{minipage}[b]{0.45\linewidth}
+\centering
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-8} 
+
+\end{knitrout}
+
+\end{minipage}
+
+
+\subsection{Redondacy distribution}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-2} 
+
+\end{knitrout}
+
+
+\section{Redondancy heatmap}
+
+
+
+\subsection{Class 1}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-41} 
+\subsection{Class 2}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-42} 
+\subsection{Class 3}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-43} 
+\subsection{Class 4}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-44} 
+
+
+
+
+
+
+\end{document}

@@ -1,0 +1,72 @@
+<<setup, message=FALSE,echo=FALSE>>=
+library(xtable)
+library(ggplot2)
+library(plyr)
+
+#example : "/data/storage/LAM-our/ourLAM-all.dat
+tsv_file <- ##common-chimeras-csv=s,"commonChimeras.pl --Rdata file (csv format)" 
+#tsv_file <- "test.dat" 
+
+dat <- read.table(file=tsv_file,sep="\t",header=TRUE,skip=1)
+
+## Add new columns for chimera redundancy
+tab <- as.data.frame(table(dat$Name))
+
+names(tab)[2] <- "Freq_Name"
+
+dat <- merge(dat,tab,by.x='Name',by.y='Var1',all=T)
+
+## Add new column for nb chimera by samples
+tab <- as.data.frame(table(dat$Sample))
+
+names(tab)[2] <- "Freq_Sample"
+
+dat <- merge(dat,tab,by.x='Sample',by.y='Var1',all=T)
+
+opts_chunk$set(echo=FALSE)
+@
+
+\documentclass[a4paper]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage[utf8x]{inputenc}
+\usepackage{xspace}
+\usepackage{adjustbox}
+\usepackage{tabularx}
+\usepackage{longtable}
+
+\title{\textsc{Common chimeras statistical report}}
+
+\author{J. Audoux, A. Boureux, F. Ruffle, T. Commes and N. Philippe}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+%\newpage
+
+\section{Introduction}
+
+\section{Samples details}
+<<child-demo, child='chimCT_common-chimeras-samples-details.Rnw', eval=TRUE>>=
+@
+
+\section{General statistics}
+
+\subsection{Class distribution}
+<<child-demo, child='chimCT_class-distribution.Rnw', eval=TRUE>>=
+@
+
+\subsection{Ranks dispersion}
+<<child-demo, child='chimCT_rank-dispersion.Rnw', eval=TRUE>>=
+@
+
+\subsection{Redundacy distribution}
+<<child-demo, child='chimCT_common-chimeras-redundancy-distribution.Rnw', eval=TRUE>>=
+@
+
+\section{Redundancy heatmap}
+<<child-demo, child='chimCT_common-chimeras-redundancy-heatmap.Rnw', eval=TRUE>>=
+@
+
+\end{document}
