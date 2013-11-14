@@ -1,6 +1,5 @@
 # Prerequisite
 You need to install the following packages :
-
 - R
 - knitr (from CRAN : install.packages('knitr', dependencies = TRUE) )
 - Any latex package to generate PDF
