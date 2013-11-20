@@ -96,7 +96,22 @@ close(IN);
 close($report_fulfilled);
 
 #print("knit ".$report_fulfilled->filename);
-system("knit ".$report_fulfilled->filename." -o ".$options{$output_name}->{value}.".tex");
+my $tex_output = $options{$output_name}->{value}.".tex";
+system("knit ".$report_fulfilled->filename." -o $tex_output");
 
 
+# Open tex output to insert CHUNKS dir, if a chunks contains relatives links
+
+open(IN,$tex_output) or die("Cannot open $tex_output");
+open(OUT,">$tex_output.tmp") or die("Cannot open $tex_output.tmp");
+
+while(<IN>) {
+  # Set chunk directory
+  $_ =~ s/\$CHUNKS_DIR(\S+?)/$chunks_dir\/$1/;
+  print OUT $_;
+}
+close(IN);
+close(OUT);
+
+system("mv $tex_output.tmp $tex_output");
 
