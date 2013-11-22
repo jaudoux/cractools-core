@@ -246,14 +246,18 @@ sub header {
 
 sub commandLine {
   my $self = shift;
-  my @header_lines = split('\n',$self->header);
-  my $command_line; 
-  foreach (@header_lines) {
-    if ($_ =~/\@PG.*PN:crac/) {
-      ($command_line) = $_ =~ /CL:([^\t]+)/;    
+  if(defined $self->header) {
+    my @header_lines = split('\n',$self->header);
+    my $command_line; 
+    foreach (@header_lines) {
+      if ($_ =~/\@PG.*PN:crac/) {
+        ($command_line) = $_ =~ /CL:([^\t]+)/;    
+      }
     }
+    return $command_line;
+  } else {
+    return undef;
   }
-  return $command_line;
 }
 
 # retrun the value of the specified argument in crac command line
@@ -270,7 +274,11 @@ sub hasCracOption {
   my $self = shift;
   my $option = shift;
   croak("Missing argument") unless defined $option;
-  return $self->commandLine =~ /--$option/;
+  if(defined $self->commandLine) {
+    return $self->commandLine =~ /--$option/;
+  } else {
+    return 0;
+  }
 }
 
 =head1 PRIVATE METHODS
