@@ -265,8 +265,12 @@ sub getCracArgumentValue {
   my $self = shift;
   my $argument = shift;
   my $command_line = $self->commandLine;
-  my ($value) = $command_line =~ /--$argument\s+(\S+)/;
-  return $value;
+  if(defined $command_line) {
+    my ($value) = $command_line =~ /--$argument\s+(\S+)/;
+    return $value;
+  } else {
+    return undef;
+  }
 }
 
 # returne true if crac command line has specified a certain option
