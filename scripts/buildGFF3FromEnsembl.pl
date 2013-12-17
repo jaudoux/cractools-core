@@ -234,9 +234,9 @@ foreach my $gene (@genes){
 	    $three_end = ($three_start eq NONE) ? NONE:$transcript_end;
 	}else{
 	    $three_end = ($cds_start =~ m/^\d+$/ && $cds_start > $transcript_start) ? ($cds_start -1):NONE; 
-	    $three_start = ($five_end eq NONE) ? NONE:$transcript_start; 
+	    $three_start = ($three_end eq NONE) ? NONE:$transcript_start; 
 	    $five_start = ($cds_end =~ m/^\d+$/ && $cds_end < $transcript_end) ? ($cds_end +1):NONE;
-	    $five_end = ($three_start eq NONE) ? NONE:$transcript_end;
+	    $five_end = ($five_start eq NONE) ? NONE:$transcript_end;
 	}
 	my @exons_transcript = @{ $transcript->get_all_Exons() };
 	my $nb_exons_transcript = scalar @exons_transcript;
