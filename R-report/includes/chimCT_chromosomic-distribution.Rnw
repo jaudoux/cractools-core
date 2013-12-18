@@ -1,5 +1,0 @@
-Distribution of chimeras among the chromosomes.
-
-<<fig.height=4,fig.width=10>>=
-ggplot(dat,aes(factor(Chr2),fill=factor(Class))) + geom_bar() + labs(title='Chromosomic distribution') + scale_x_discrete(limits=c(1:22,"X","Y")) + xlab("Chromosome")
-@

@@ -6,13 +6,6 @@ Makefile$
 # Lib files
 ^blib/
 
-# Extra files
-^test/
-^extra/
-\.cfg$
-TODO
-todotest
-
 # Temp files
 \.swp$
 \.old$
@@ -20,3 +13,13 @@ todotest
 
 # SVN
 \.svn
+
+# Not distributed files
+^R-report
+install_local.sh
+^test/
+^extra/
+\.cfg$
+^TODO
+todotest
+MANIFEST.SKIP

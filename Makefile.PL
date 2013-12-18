@@ -102,11 +102,12 @@ my %prereq_pm = (
 WriteMakefile(
   NAME              => 'CracTools-core',
   VERSION_FROM      => 'lib/CracTools.pm',
-  ABSTRACT          => 'lib/CracTools.pm',
+  ($] >= 5.005 ? ## Add these new keywords supported since 5.005 
+  (ABSTRACT     =>  'A set of tools designed to extract data from CRAC\'s SAM files and to provide annotations',
+  AUTHOR            => \@authors) :()),
   EXE_FILES         => [glob('scripts/*')],
   PREREQ_FATAL      => 1,
   PREREQ_PM         => \%prereq_pm,
-  AUTHOR            => \@authors,
 );
 
 1;
