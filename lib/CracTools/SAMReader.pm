@@ -244,6 +244,27 @@ sub header {
   return $self->{header};
 }
 
+=head2 refSeqLength
+
+  Description : Return the length of the reference sequence given in argument
+  ReturnType  : Integer
+
+=cut
+
+sub refSeqLength {
+  my $self = shift;
+  my $ref_seq = shift;
+  croak "Missing reference sequence name in arguement" unless defined $ref_seq;
+  my @header_lines = split('\n',$self->header);
+  my $ref_seq_len; 
+  foreach (@header_lines) {
+    if ($_ =~/\@SQ.*SN:$seq_ref/) {
+      ($ref_seq_len) = $_ =~ /LN:([^\t]+)/;    
+    }
+  }
+  return $ref_seq_len;
+}
+
 sub commandLine {
   my $self = shift;
   if(defined $self->header) {
