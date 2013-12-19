@@ -84,9 +84,9 @@ CracTools - A set of tools designed to extract data from CRAC's SAM files and to
 
 package CracTools;
 
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
-our $PACKAGE_NAME = "CracTools-core";
+our $PACKAGE_NAME = "CracTools";
 
 =head1 AUTHORS
 
