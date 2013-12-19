@@ -254,11 +254,11 @@ sub header {
 sub refSeqLength {
   my $self = shift;
   my $ref_seq = shift;
-  croak "Missing reference sequence name in arguement" unless defined $ref_seq;
+  croak("Missing reference sequence name in arguement") unless defined $ref_seq;
   my @header_lines = split('\n',$self->header);
   my $ref_seq_len; 
   foreach (@header_lines) {
-    if ($_ =~/\@SQ.*SN:$seq_ref/) {
+    if ($_ =~/\@SQ.*SN:$ref_seq/) {
       ($ref_seq_len) = $_ =~ /LN:([^\t]+)/;    
     }
   }
