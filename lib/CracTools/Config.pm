@@ -76,6 +76,12 @@
 #                                                                             #
 ###############################################################################
 
+=head1 NAME
+
+CracTools::Config - Manage and access CracTools configuration file
+
+=cut
+
 
 package CracTools::Config;
 

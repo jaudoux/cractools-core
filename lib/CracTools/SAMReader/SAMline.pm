@@ -78,11 +78,9 @@
 
 =head1 NAME
 
-  CracTools::SAMReader::SAMline - The object for manipulation a SAM line.
+CracTools::SAMReader::SAMline - The object for manipulation a SAM line.
 
 =head1 SYNOPSIS
-
-Usage:
 
   use CracTools::SAMReader::SAMline;
 
@@ -90,8 +88,8 @@ Usage:
 
 =head1 DESCRIPTION
 
-  An object for easy acces to SAM line fields. See SAM Specifications for more informations :
-  http://samtools.sourceforge.net/SAM1.pdf
+An object for easy acces to SAM line fields. See SAM Specifications for more informations :
+http://samtools.sourceforge.net/SAM1.pdf
 
 =cut
 
@@ -529,7 +527,9 @@ sub tlen {
 
 =head2 seq
 
-  Description : Getter/Setter for attribute seq (the sequence)
+  Description : Getter/Setter for attribute seq (the sequence).
+                Please use getOriginalSeq if you want to retrieve the oriented
+                sequence, that what you need in most cases.
   ReturnType  : String
   Exceptions  : none
 
@@ -563,6 +563,34 @@ sub qual {
     $self->{qual} = $self->getField(10);
   }
   return $self->{qual};
+}
+
+=head2 pSupport
+
+  Description : Return the support profile of the read if the SAM file has been generated with
+                CRAC option --detailed
+  ReturnType  : String
+
+=cut
+
+sub pSupport {
+  my $self = shift;
+  $self->loadSamDetailed;
+  return $self->{sam_detailed}{p_support};
+}
+
+=head2 pLoc
+
+  Description : Return the location profile of the read if the SAM file has been generated with
+                CRAC option --detailed
+  ReturnType  : String
+
+=cut
+
+sub pLoc {
+  my $self = shift;
+  $self->loadSamDetailed;
+  return $self->{sam_detailed}{p_loc};
 }
 
 =head2 genericInfo
@@ -797,6 +825,7 @@ sub addEvent {
 =head2 removeEvent 
 
   Arg [1] : Hash reference - The event object
+
   Description : Remove the event from the event hash and from the line.
 
 =cut
@@ -924,17 +953,14 @@ sub loadSamDetailed {
   }
 }
 
-sub pSupport {
-  my $self = shift;
-  $self->loadSamDetailed;
-  return $self->{sam_detailed}{p_support};
-}
+=head2 getField
 
-sub pLoc {
-  my $self = shift;
-  $self->loadSamDetailed;
-  return $self->{sam_detailed}{p_loc};
-}
+  Arg [1] : Integer - Field number
+
+  Description : Return the value of the Xth field of the SAMline
+  ReturnType  : String
+
+=cut
 
 sub getField {
   my $self = shift;
@@ -951,11 +977,33 @@ sub getField {
   #return $col_val;
 }
 
+=head2 expandCracLoc
+
+  Arg [1] : String - Localisation in crac format : Chromosome|strand,position
+            Ex : X|-1,2332377
+
+  Description : Extract Chromosme, position and strand as separated variable from
+                the localisation in CRAC format.
+  ReturnType  : Array($chromosome,$position,$strand)
+
+=cut
+
 sub expandCracLoc {
   my $loc = shift;
   my($chr,$strand,$pos) = $loc =~ /(\S+)\|(\S+)?,(\S+)?/; 
   return ($chr,$pos,$strand);
 }
+
+=head2 compressCracLoc
+
+  Arg [1] : String - Chromosome
+  Arg [2] : Integer - Postition
+  Arg [3] : Integer (1,-1) - Strand
+
+  Description : Reverse function of "expandCracLoc"
+  ReturnType  : String (localisation in CRAC format)
+
+=cut
 
 sub compressCracLoc {
   my ($chr,$pos,$strand) = @_;

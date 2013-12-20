@@ -78,11 +78,7 @@
 
 =head1 NAME
 
-  CracTools::GFF::Annotator - Generic annotation base on CracTools::GFF::Query.pm
-
-=head1 SYNOPSIS
-
-=head1 DESCRIPTION
+CracTools::Annotator - Generic annotation base on CracTools::GFF::Query.pm
 
 =cut
 
@@ -208,7 +204,7 @@ sub getBestAnnotationCandidate {
   return $best_candidate,$best_priority,$best_type;
 }
 
-=head2 getBestAnnotationCandidate
+=head2 getAnnotationCandidates
 
   Arg [1] : String - chr
   Arg [2] : String - pos_start
