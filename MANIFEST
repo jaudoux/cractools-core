@@ -1,10 +1,4 @@
 Changes
-CracTools-core-1.01/Changes
-CracTools-core-1.01/CracTools-core-1.01/scripts/buildGFF3FromEnsembl.pl
-CracTools-core-1.01/lib/CracTools/GFF/Annotation.pm
-CracTools-core-1.01/MANIFEST
-CracTools-core-1.01/scripts/buildGFF3FromEnsembl.pl
-CracTools-core-1.01/t/00-load-common.t
 lib/CracTools.pm
 lib/CracTools/Annotator.pm
 lib/CracTools/Config.pm
