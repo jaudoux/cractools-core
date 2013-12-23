@@ -816,7 +816,7 @@ sub addEvent {
   my $event = shift;
   my $event_type = $event->{event_type};
   if(defined $self->{events}{$event_type}) {
-    push($self->{events}{$event_type},$event);
+    push(@{$self->{events}{$event_type}},$event);
   } else {
     $self->{events}{$event_type} = [$event];
   }
