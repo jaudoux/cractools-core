@@ -1,4 +1,10 @@
 Changes
+CracTools-core-1.01/Changes
+CracTools-core-1.01/CracTools-core-1.01/scripts/buildGFF3FromEnsembl.pl
+CracTools-core-1.01/lib/CracTools/GFF/Annotation.pm
+CracTools-core-1.01/MANIFEST
+CracTools-core-1.01/scripts/buildGFF3FromEnsembl.pl
+CracTools-core-1.01/t/00-load-common.t
 lib/CracTools.pm
 lib/CracTools/Annotator.pm
 lib/CracTools/Config.pm
@@ -12,18 +18,17 @@ lib/CracTools/Utils.pm
 LICENSE
 Makefile.PL
 MANIFEST			This list of files
-MYMETA.yml
 README
 scripts/buildGFF3FromEnsembl.pl
 scripts/generateCracSummary.pl
 scripts/generateReport.pl
 scripts/mix_summarize_crac.pl
 t/00-load-common.t
-t/CracTools::Annotator.t
-t/CracTools::GFF::Annotation.t
-t/CracTools::GFF::Query.t
-t/CracTools::SAMReader.t
-t/CracTools::SAMReader::SAMline.t
+t/CracTools-Annotator.t
+t/CracTools-GFF-Annotation.t
+t/CracTools-GFF-Query.t
+t/CracTools-SAMReader-SAMline.t
+t/CracTools-SAMReader.t
 t/manifest.t
 t/pod-coverage.t
 t/pod.t
