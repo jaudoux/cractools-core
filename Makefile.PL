@@ -90,8 +90,8 @@ my $Jero = 'Jérôme AUDOUX <jerome.audoux@univ-montp2.fr>';
 my $authors = "$Nico, $DoccY, $Jero";
 
 my %prereq_pm = (
-  #"Config::FileManager" => 0,
-  #"Config::Simple" => 0,
+  "Config::FileManager" => 0,
+  "Config::Simple" => 0,
   #"Storable" => 0,
   "Fcntl" => 0,
   "Carp" => 0,
