@@ -126,6 +126,26 @@ sub new {
   return $self;
 }
 
+=head2 foundGene
+
+  Arg [1] : String - chr
+  Arg [2] : String - pos_start
+  Arg [3] : String - pos_end
+  Arg [4] : String - strand
+
+  Description : Return true if there is an exon of a gene is this interval
+  ReturnType  : Boolean
+  Exceptions  : none
+
+=cut
+
+sub foundGene {
+  my $self = shift;
+  my ($chr,$pos_start,$pos_end,$strand) = @_;
+  my @candidates = $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand);
+  return @candidates > 0;
+}
+
 =head2 foundSameGene
 
   Arg [1] : String - chr
