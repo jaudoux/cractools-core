@@ -593,6 +593,21 @@ sub pLoc {
   return $self->{sam_detailed}{p_loc};
 }
 
+=head2 pairedChimera
+
+  Description : return the chimeric coordinates of the paired chimera associated to this read if there is one
+
+  ReturnType  : array(chr1,pos1,strand1,chr2,pos2,strand2) or undef
+
+=cut
+
+sub pairedChimera {
+  my $self = shift;
+  my ($crac_loc1,$crac_loc2) = $self->line =~ /XP:Z:chimera:(\S+):(\S+)/;
+  return (expandCracLoc($crac_loc1),expandCracLoc($crac_loc2));
+}
+
+
 =head2 genericInfo
   
   [1] : Key of the generic info
