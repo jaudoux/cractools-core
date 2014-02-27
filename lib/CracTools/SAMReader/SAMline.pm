@@ -100,6 +100,7 @@ use strict;
 use warnings;
 use Carp;
 use Data::Dumper;
+use Switch;
 
 use CracTools::Utils;
 
@@ -188,20 +189,30 @@ sub new {
   my $class = shift;
   my ($line) = @_;
   
-  my ($qname,$flag,$rname,$pos,$mapq,$cigar,$rnext,$pnext,$tlen,$seq,$qual) = split(/\s+/,$line);
+  my ($qname,$flag,$rname,$pos,$mapq,$cigar,$rnext,$pnext,$tlen,$seq,$qual,@others) = split(/\s+/,$line);
+  my %extended_fields;
+  foreach(@others) {
+    my $key = substr($_,0,2);
+    my $value = substr($_,4);
+    print STDERR "$key:$value\n";
+    #my($key,$type,$value) = split(':',$_,3); 
+    # Hack in case there is multiple field with the same tag
+    $extended_fields{$key} = defined $extended_fields{$key}? $extended_fields{$key}.";".$value : $value;
+  }
 
   my $self = bless{ 
-      qname => $qname,
-      flag => $flag,
-      rname => $rname,
-      pos => $pos,
-      mapq => $mapq,
-      cigar => $cigar,
-      rnext => $rnext,
-      pnext => $pnext,
-      tlen => $tlen,
-      seq => $seq,
-      qual => $qual,
+    qname => $qname,
+    flag => $flag,
+    rname => $rname,
+    pos => $pos,
+    mapq => $mapq,
+    cigar => $cigar,
+    rnext => $rnext,
+    pnext => $pnext,
+    tlen => $tlen,
+    seq => $seq,
+    qual => $qual,
+    extended_fields => \%extended_fields,
     line => $line,
   }, $class;
 
@@ -354,8 +365,6 @@ sub qname {
   my $new_qname = shift;
   if(defined $new_qname) {
     $self->{qname} = $new_qname;
-  } elsif(!defined $self->{qname}) {
-    $self->{qname} = $self->getField(0);
   }
   return $self->{qname};
 }
@@ -373,8 +382,6 @@ sub flag {
   my $new_flag = shift;
   if(defined $new_flag) {
     $self->{flag} = $new_flag;
-  } elsif(!defined $self->{flag}) {
-    $self->{flag} = $self->getField(1);
   }
   return $self->{flag};
 }
@@ -392,8 +399,6 @@ sub rname {
   my $new_rname = shift;
   if(defined $new_rname) {
     $self->{rname} = $new_rname;
-  } elsif(!defined $self->{rname}) {
-    $self->{rname} = $self->getField(2);
   }
   return $self->{rname};
 }
@@ -424,8 +429,6 @@ sub pos {
   my $new_pos = shift;
   if(defined $new_pos) {
     $self->{pos} = $new_pos;
-  } elsif(!defined $self->{pos}) {
-    $self->{pos} = $self->getField(3);
   }
   return $self->{pos};
 }
@@ -443,8 +446,6 @@ sub mapq {
   my $new_mapq = shift;
   if(defined $new_mapq) {
     $self->{mapq} = $new_mapq;
-  } elsif(!defined $self->{mapq}) {
-    $self->{mapq} = $self->getField(4);
   }
   return $self->{mapq};
 }
@@ -462,8 +463,6 @@ sub cigar {
   my $new_cigar = shift;
   if(defined $new_cigar) {
     $self->{cigar} = $new_cigar;
-  } elsif(!defined $self->{cigar}) {
-    $self->{cigar} = $self->getField(5);
   }
   return $self->{cigar};
 }
@@ -481,8 +480,6 @@ sub rnext {
   my $new_rnext = shift;
   if(defined $new_rnext) {
     $self->{rnext} = $new_rnext;
-  } elsif(!defined $self->{rnext}) {
-    $self->{rnext} = $self->getField(6);
   }
   return $self->{rnext};
 }
@@ -500,8 +497,6 @@ sub pnext {
   my $new_pnext = shift;
   if(defined $new_pnext) {
     $self->{pnext} = $new_pnext;
-  } elsif(!defined $self->{pnext}) {
-    $self->{pnext} = $self->getField(7);
   }
   return $self->{pnext};
 }
@@ -519,8 +514,6 @@ sub tlen {
   my $new_tlen = shift;
   if(defined $new_tlen) {
     $self->{tlen} = $new_tlen;
-  } elsif(!defined $self->{tlen}) {
-    $self->{tlen} = $self->getField(8);
   }
   return $self->{tlen};
 }
@@ -540,8 +533,6 @@ sub seq {
   my $new_seq = shift;
   if(defined $new_seq) {
     $self->{seq} = $new_seq;
-  } elsif(!defined $self->{seq}) {
-    $self->{seq} = $self->getField(9);
   }
   return $self->{seq};
 }
@@ -559,8 +550,6 @@ sub qual {
   my $new_qual = shift;
   if(defined $new_qual) {
     $self->{qual} = $new_qual;
-  } elsif(!defined $self->{qual}) {
-    $self->{qual} = $self->getField(10);
   }
   return $self->{qual};
 }
@@ -657,11 +646,14 @@ sub genericInfo {
 sub isClassified {
   my $self = shift;
   my $class = shift;
-  $self->loadClassification();
-  if(defined $self->{classification}{$class} && $self->{classification}{$class} == 1) {
-    return 1;
-  } else {
-    return 0;
+
+  switch($class) {
+    case "unique"       { return $self->{extended_fields}{XU} }
+    case "duplicated"   { return $self->{extended_fields}{XD} }
+    case "multiple"     { return $self->{extended_fields}{XM} }
+    case "normal"       { return $self->{extended_fields}{XN} == 1 }
+    case "almostNormal" { return $self->{extended_fields}{XU} == 2 }
+    else                { return undef }
   }
 }
 
@@ -690,7 +682,7 @@ sub isClassified {
 sub events {
   my $self = shift;
   my $event_type = shift;
-  $self->loadEvents();
+  $self->loadEvents($event_type);
   if(defined $self->{events}{$event_type}) {
     return $self->{events}{$event_type};
   } else {
@@ -699,29 +691,6 @@ sub events {
 }
 
 =head1 PRIVATE METHODS
-
-=head2 loadClassification
-
-  Example     : $sam_line->loadClassification();
-  Description : Loading of classification attributes
-  ReturnType  : none
-  Exceptions  : none
-
-=cut
-
-sub loadClassification {
-  my $self = shift;
-  if(!defined $self->{classification}) {
-    # Init classification
-    my %classification;
-    $classification{unique} = $self->line =~ /XU:i:1/;
-    $classification{duplicated} = $self->line =~ /XD:i:1/;
-    $classification{multiple} = $self->line =~ /XM:i:1/;
-    $classification{normal} = $self->line =~ /XN:i:1/;
-    $classification{almostNormal} = $self->line =~ /XN:i:2/;
-    $self->{classification} = \%classification;
-  }
-}
 
 =head2 loadEvents
 
@@ -735,13 +704,13 @@ sub loadClassification {
 sub loadEvents {
   my $self = shift;
   my $event_type_to_load = shift;
-  # TODO avoid double loading when doing lazy loading
+  ## TODO avoid double loading when doing lazy loading
   if(defined $event_type_to_load && defined $self->{$event_type_to_load}{loaded}) {
     return 0;
   }
-  if(!defined $self->{events}) { 
+  if(!defined $self->{events} && defined $self->{extended_fields}{XE}) { 
     # Init events
-    my @events = $self->line =~ /XE:Z:([^\t]+)/g;
+    my @events = split(";",$self->{extended_fields}{XE});
     foreach my $event (@events) {
       my ($event_id,$event_break_id,$event_type,$event_infos) = $event =~ /([^:]+):([^:]+):([^:]+):(.*)/g;
       next if(defined $event_type_to_load && $event_type ne $event_type_to_load);
@@ -952,7 +921,8 @@ sub updateEvent {
 sub loadSamDetailed {
   my $self = shift;
   if(!defined $self->{sam_detailed}) {
-    my ($detailed) = $self->line =~ /XR:Z:([^\s]+)/g;
+    #my ($detailed) = $self->line =~ /XR:Z:([^\s]+)/g;
+    my $detailed = $self->{extended_fields}{XR};
     my @detailed_fields = split(";",$detailed); 
     foreach (@detailed_fields) {
       my ($k,$v) = split('=',$_);
@@ -968,29 +938,16 @@ sub loadSamDetailed {
   }
 }
 
-=head2 getField
+=head2 loadPaired
 
-  Arg [1] : Integer - Field number
-
-  Description : Return the value of the Xth field of the SAMline
-  ReturnType  : String
+  Example     : $sam_line->loadPaired();
+  Description : Loading of sam detaileds attributes
+  ReturnType  : none
+  Exceptions  : none
 
 =cut
 
-sub getField {
-  my $self = shift;
-  my $col_num = shift;
-  my @fields = split("\t",$self->line,$col_num+2);
-  return $fields[$col_num];
-  #my $sep = '\t';
-  #my $regex = '';
-  #for(my $i = 0; $i < $col_num; $i++) {
-  #  $regex .= '[^'.$sep.'.]*'.$sep;
-  #}
-  #$regex .= '([^'.$sep.'.]*)';
-  #my ($col_val) = $self->{line} =~ /^$regex/;
-  #return $col_val;
-}
+#sub loadPaired {
 
 =head2 expandCracLoc
 
