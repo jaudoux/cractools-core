@@ -193,7 +193,7 @@ sub iteratorFile {
   } elsif($self->{sam_file} =~ /\.sam.gz$/) {
     open(SAM,"gunzip -c $sam_file |") or die ("Cannot open $sam_file");
   } elsif($self->{sam_file} =~ /\.bam$/) {
-    open(SAM, "-|", "samtools view $sam_file" )or die "Cannot open $sam_file, check if samtools are installed.";
+    open(SAM, "-|", "samtools view -h $sam_file" )or die "Cannot open $sam_file, check if samtools are installed.";
   } else {
     die "Unknown file format. Must be either a BAM or a SAM(.gz)";
   }
