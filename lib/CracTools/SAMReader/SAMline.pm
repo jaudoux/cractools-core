@@ -189,12 +189,11 @@ sub new {
   my $class = shift;
   my ($line) = @_;
   
-  my ($qname,$flag,$rname,$pos,$mapq,$cigar,$rnext,$pnext,$tlen,$seq,$qual,@others) = split(/\s+/,$line);
+  my ($qname,$flag,$rname,$pos,$mapq,$cigar,$rnext,$pnext,$tlen,$seq,$qual,@others) = split("\t",$line);
   my %extended_fields;
   foreach(@others) {
     my $key = substr($_,0,2);
-    my $value = substr($_,4);
-    print STDERR "$key:$value\n";
+    my $value = substr($_,5);
     #my($key,$type,$value) = split(':',$_,3); 
     # Hack in case there is multiple field with the same tag
     $extended_fields{$key} = defined $extended_fields{$key}? $extended_fields{$key}.";".$value : $value;
@@ -592,8 +591,39 @@ sub pLoc {
 
 sub pairedChimera {
   my $self = shift;
-  my ($crac_loc1,$crac_loc2) = $self->line =~ /XP:Z:chimera:(\S+):(\S+)/;
-  return (expandCracLoc($crac_loc1),expandCracLoc($crac_loc2));
+  $self->loadPaired();
+  if(defined $self->{extended_fields}{XP}{chimera}) {
+    my ($crac_loc1,$crac_loc2) = split(":",$self->{extended_fields}{XP}{chimera});
+    return (expandCracLoc($crac_loc1),expandCracLoc($crac_loc2));
+  } else {
+    return undef;
+  }
+}
+
+=head2 isPairedClassified
+
+  Arg [1] : String - The class to test :
+            - "unique"
+            - "duplicated"
+            - "multiple"
+
+  Description : Test paired-end read clasification
+
+  ReturnType  : Boolean
+
+=cut
+
+sub isPairedClassified {
+  my $self = shift;
+  my $class = shift;
+  $self->loadPaired();
+
+  if(defined $self->{extended_fields}{XP}{loc} && ref($self->{extended_fields}{XP}{loc}) ne 'HASH') {
+    my ($uniq,$dupli,$multi) = split(":",$self->{extended_fields}{XP}{loc});
+    $self->{extended_fields}{XP}{loc} = {unique => $uniq, duplicated => $dupli, multiple => $multi};
+
+  }
+  return $self->{extended_fields}{XP}{loc}{$class};
 }
 
 
@@ -947,7 +977,18 @@ sub loadSamDetailed {
 
 =cut
 
-#sub loadPaired {
+sub loadPaired {
+  my $self = shift;
+  # If XP fields exist and we haven't load it already
+  if(defined $self->{extended_fields}{XP} && ref($self->{extended_fields}{XP}) ne 'HASH') {
+    my @paired_fields = split(";",$self->{extended_fields}{XP});
+    $self->{extended_fields}{XP} = {}; # Chamge type of XP exetended field from scalar to hash ref
+    foreach (@paired_fields) {
+      my($key,$value) = split(":",$_,2);
+      $self->{extended_fields}{XP}{$key} = $value;
+    }
+  }
+}
 
 =head2 expandCracLoc
 
