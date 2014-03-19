@@ -188,7 +188,7 @@ sub hasEvent {
 sub new {
   my $class = shift;
   my ($line) = @_;
-  
+  chomp $line;  
   my ($qname,$flag,$rname,$pos,$mapq,$cigar,$rnext,$pnext,$tlen,$seq,$qual,@others) = split("\t",$line);
   my %extended_fields;
   foreach(@others) {
