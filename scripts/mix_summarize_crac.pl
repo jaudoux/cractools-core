@@ -14,21 +14,21 @@ mix_summarize_crac - a script to outline % locations per library
 Usage: 
   mix_summarize_crac [options] file1 file2 file3
 
-Option : -o output_file_name
+Main option :
+  -globalonly      	- Show only global mapping values
+  -explainedsonly   - Show only explained mapping values
+  -output filename  - the filename the stats are written (STDOUT by default)
+  -help             - help / usage
+  -man              - print man page
 
 =head1 DESCRIPTION
 
 This script will create a report with statistic data.
+
 The options are:
-	-globalonly		- Show only global mapping values
-	-explainedsonly		- Show only explained mapping values
-	-output filename	- the filename the stats are written (STDOUT by default)
-#	-graph name					- output graph also with filename name [default= libname.graph.png]
-	-namecolumns 'columns header'		- Split filename with /-/, and set header columns (ex: Exp-Nb-lib)
-	-separator char		- Separator (default -) to use to split filename and namecolumns
-	-verbose value		- verbose mode (2=DEBUG)
-	-help				- help / usage
-	-man				- print man page
+  -namecolumns 'columns header'   - Split filename with /-/, and set header columns (ex: Exp-Nb-lib)
+  -separator char                 - Separator (default -) to use to split filename and namecolumns
+  -verbose value                  - verbose mode (2=DEBUG)
 
 =head1 AUTHOR
 
@@ -36,7 +36,7 @@ Anthony Boureux <Anthony.boureux@univ-montp2.fr>
 
 =head1 TODO
 
-	 generate graph
+  - generate a %mapping.. graph
 
 =cut
 
