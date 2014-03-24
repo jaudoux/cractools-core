@@ -15,6 +15,7 @@ Usage:
   mix_summarize_crac [options] file1 file2 file3
 
 Main option :
+
   -globalonly      	- Show only global mapping values
   -explainedsonly   - Show only explained mapping values
   -output filename  - the filename the stats are written (STDOUT by default)
