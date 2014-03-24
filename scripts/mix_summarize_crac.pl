@@ -56,7 +56,7 @@ my $verbose = 0;
 my $output;# = \*STDOUT; not good for getoptions
 my %patterns = (
 	'global' => ['Single', 'Duplication', 'Multiple', 'None'],
-	'explained' => ['Explainable', 'Repetition', 'Normal', 'Almost-Normal', 'Sequence-Errors', 'SNV', 'Short-Indel', 'Splice', 'Weak-Splice', 'Chimera', 'Paired-end Chimera', 'Bio-Undetermined', 'Undetermined', 'Nothing']
+	'explained' => ['Explainable', 'Repetition', 'Normal', 'Almost-Normal', 'Sequence-Errors', 'SNV', 'Short-Indel', 'Splice', 'Weak-Splice', 'Chimera', 'Paired-end chimera', 'Bio-Undetermined', 'Undetermined', 'Nothing']
 );
 
 my $extension='';
@@ -102,11 +102,11 @@ foreach my $file (@ARGV) {
 	foreach my $type (keys %patterns) {
 		foreach my $pattern (@{$patterns{$type}}) {
 			print STDERR "pat= $pattern\n" if ($DEBUG);
-			($reads{$file}{$type}{$pattern}) = ($contents =~ /$pattern: (\d+)/sm);
+			($reads{$file}{$type}{$pattern}) = ($contents =~ /$pattern: (\d+)/ism);
 			print STDERR "val=", $reads{$file}{$type}{$pattern}, "\n" if ($DEBUG);
 		}
 	}
-	my ($total_analyze) = ($contents =~ /Total number of reads analyzed: (\d+)/sm);
+	my ($total_analyze) = ($contents =~ /Total number of reads analyzed: (\d+)/ism);
 
 	# calculate total
 	foreach my $type (keys %{$reads{$file}}) {
