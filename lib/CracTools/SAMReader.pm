@@ -76,6 +76,8 @@
 #                                                                             #
 ###############################################################################
 
+=encoding utf8
+
 =head1 NAME
 
 CracTools::SAMReader - An easy to use tool to read files in SAM format.
