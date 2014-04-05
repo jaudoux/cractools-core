@@ -589,7 +589,7 @@ sub getOptionalField {
 =cut
 
 sub getChimericAlignments {
-    my $shelf = shift;
+    my $self = shift;
     # check the existence of the SA field in the SAM line
     if (defined $self->{extended_fields}{SA}){
 	my @array_hash;
