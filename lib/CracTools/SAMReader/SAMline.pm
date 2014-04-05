@@ -573,6 +573,50 @@ sub getOptionalField {
   return $self->{extended_fields}{$field};
 }
 
+
+=head2 getChimericAlignments
+
+  Description : Parser of SA fields of SAM file in order to find chimeric reads
+  ReturnType  : Array reference
+                Elements are hash [ chr    => String, 
+                                    pos    => int, 
+                                    strand => 1/-1, 
+                                    cigar  => String,
+                                    mapq   => int,
+                                    edist  => int
+                                  ]
+
+=cut
+
+sub getChimericAlignments {
+    my $shelf = shift;
+    # check the existence of the SA field in the SAM line
+    if (defined $self->{extended_fields}{SA}){
+	my @array_hash;
+	my (@SA_alignments) = split(/;/,$self->{extended_fields}{SA});
+	for (my $i=0 ;  $i < scalar @SA_alignments ; $i++){
+	    my ($chr,$pos,$strand,$cigar,$mapq,$edist) = split(/,/,$SA_alignments[$i]);
+	    # strand switch from "+,-" to "1,-1"
+	    if ($strand eq '+'){
+		$strand = 1;
+	    }else{
+		$strand = -1;
+	    }
+	    my $hash = { chr => $chr, 
+			 pos => $pos,
+			 strand => $strand,
+			 cigar => $cigar,
+			 mapq => $mapq,
+			 edist => $edist};
+	    push(@array_hash,$hash);
+	}
+	return \@array_hash;
+    }
+    return undef;
+}
+
+
+
 =head2 pSupport
 
   Description : Return the support profile of the read if the SAM file has been generated with
