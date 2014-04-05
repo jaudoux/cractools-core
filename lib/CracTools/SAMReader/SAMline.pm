@@ -76,6 +76,8 @@
 #                                                                             #
 ###############################################################################
 
+=encoding utf8
+
 =head1 NAME
 
 CracTools::SAMReader::SAMline - The object for manipulation a SAM line.
@@ -134,6 +136,8 @@ SAM flags :
 
 =item * PCR_DUPLICATED => 1024,
 
+=item * CHIMERIC_ALIGNEMENT => 2048,
+
 =back
 
 =cut
@@ -149,6 +153,7 @@ our %flags = ( MULTIPLE_SEGMENTS => 1,
             SECONDARY_ALIGNEMENT => 256,
             QUALITY_CONTROLS_FAILED => 512,
             PCR_DUPLICATED => 1024,
+            CHIMERIC_ALIGNEMENT => 2048,
           );
 
 =head1 STATIC PARSING METHODS
@@ -551,6 +556,21 @@ sub qual {
     $self->{qual} = $new_qual;
   }
   return $self->{qual};
+}
+
+=head2 getOptionalField
+
+  Example     : 
+  Description : 
+  ReturnType  : 
+
+=cut
+
+sub getOptionalField {
+  my $self = shift;
+  my $field = shift;
+  croak("Missing \$field argument to call getOptionalField") unless defined $field;
+  return $self->{extended_fields}{$field};
 }
 
 =head2 pSupport

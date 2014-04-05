@@ -95,7 +95,7 @@ my %prereq_pm = (
   #"Storable" => 0,
   "Fcntl" => 0,
   "Carp" => 0,
-  "Set::IntervalTree" => 0,
+  "Set::IntervalTree" => 0.09,
 );
 
 ## Makefile for Complete Module
