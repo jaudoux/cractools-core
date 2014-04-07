@@ -615,7 +615,31 @@ sub getChimericAlignments {
     return undef;
 }
 
+=head2 getCigarOperatorsCount
 
+  Example     : my %cigar_counts = %{ $sam_line->getCigarOperatorsCount() };
+                print "nb mismatches; ",$cigar_counts{X},"\n";
+  Description : Return a hash reference where the keys are the cigar operators and the values
+                the sum of length associated for each operator.
+                For cigar 5S3M1X2M10S, getCigarOperatorsCounts() will retrun :
+                { 'S' => 15,
+                  'M' => 5,
+                  'X' => 1,
+                };
+  ReturnType  : Hash reference 
+=cut
+
+sub getCigarOperatorsCount {
+  my $self = shift;
+  my @ops = $self->cigar =~ /(\d+\D)/g;
+  my %ops_occ;
+  foreach (@ops) {
+    my ($nb,$op) = $_ =~ /(\d+)(\D)/;
+    $ops_occ{$op} = 0 unless defined $ops_occ{$op};
+    $ops_occ{$op} += $nb;
+  }
+  return \%ops_occ;
+}
 
 =head2 pSupport
 
