@@ -130,13 +130,13 @@ SAM flags :
 
 =item * LAST_SEGMENT => 128,
 
-=item * SECONDARY_ALIGNEMENT => 256,
+=item * SECONDARY_ALIGNMENT => 256,
 
 =item * QUALITY_CONTROLS_FAILED => 512,
 
 =item * PCR_DUPLICATED => 1024,
 
-=item * CHIMERIC_ALIGNEMENT => 2048,
+=item * CHIMERIC_ALIGNMENT => 2048,
 
 =back
 
@@ -150,10 +150,10 @@ our %flags = ( MULTIPLE_SEGMENTS => 1,
             NEXT_REVERSE_COMPLEMENTED => 32,
             FIRST_SEGMENT => 64,
             LAST_SEGMENT => 128,
-            SECONDARY_ALIGNEMENT => 256,
+            SECONDARY_ALIGNMENT => 256,
             QUALITY_CONTROLS_FAILED => 512,
             PCR_DUPLICATED => 1024,
-            CHIMERIC_ALIGNEMENT => 2048,
+            CHIMERIC_ALIGNMENT => 2048,
           );
 
 =head1 STATIC PARSING METHODS
