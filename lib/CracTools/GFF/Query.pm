@@ -193,7 +193,7 @@ sub fetchByRegion {
             The orientation of the slice on the sequence region
 
   Example     : my @annotations = $gffQuery->fetchByLocation('1',298345,'+');
-  Description : Retrives GFF lines that belong to the location.
+  Description : Retrives GFF lines that overlapped the given location.
   ReturnType  : Reference to an Array of strings
   Exceptions  : none
 
