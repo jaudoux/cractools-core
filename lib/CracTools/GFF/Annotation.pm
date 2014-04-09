@@ -275,7 +275,7 @@ sub score {
 
 =head2 strand
 
-  Description : Getter/setter for attribute strand ('+','-' convention)
+  Description : Getter/setter for attribute strand ('1','-1' convention)
 
 =cut
 
@@ -290,7 +290,7 @@ sub strand {
 
 =head2 gffStrand
 
-  Description : Return strand using "1","-1" convention.
+  Description : Return strand using "+","-" convention.
 
 =cut
 
