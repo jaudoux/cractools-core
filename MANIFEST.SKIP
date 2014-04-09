@@ -9,6 +9,8 @@ MYMETA.yml
 
 # Temp files
 \.swp$
+\.swn$
+\.swo$
 \.old$
 \.bak
 
