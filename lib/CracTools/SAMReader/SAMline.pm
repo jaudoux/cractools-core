@@ -101,8 +101,6 @@ package CracTools::SAMReader::SAMline;
 use strict;
 use warnings;
 use Carp;
-use Data::Dumper;
-use Switch;
 
 use CracTools::Utils;
 
@@ -130,13 +128,13 @@ SAM flags :
 
 =item * LAST_SEGMENT => 128,
 
-=item * SECONDARY_ALIGNEMENT => 256,
+=item * SECONDARY_ALIGNMENT => 256,
 
 =item * QUALITY_CONTROLS_FAILED => 512,
 
 =item * PCR_DUPLICATED => 1024,
 
-=item * CHIMERIC_ALIGNEMENT => 2048,
+=item * CHIMERIC_ALIGNMENT => 2048,
 
 =back
 
@@ -150,10 +148,10 @@ our %flags = ( MULTIPLE_SEGMENTS => 1,
             NEXT_REVERSE_COMPLEMENTED => 32,
             FIRST_SEGMENT => 64,
             LAST_SEGMENT => 128,
-            SECONDARY_ALIGNEMENT => 256,
+            SECONDARY_ALIGNMENT => 256,
             QUALITY_CONTROLS_FAILED => 512,
             PCR_DUPLICATED => 1024,
-            CHIMERIC_ALIGNEMENT => 2048,
+            CHIMERIC_ALIGNMENT => 2048,
           );
 
 =head1 STATIC PARSING METHODS
@@ -573,6 +571,74 @@ sub getOptionalField {
   return $self->{extended_fields}{$field};
 }
 
+
+=head2 getChimericAlignments
+
+  Description : Parser of SA fields of SAM file in order to find chimeric reads
+  ReturnType  : Array reference
+                Elements are hash [ chr    => String, 
+                                    pos    => int, 
+                                    strand => 1/-1, 
+                                    cigar  => String,
+                                    mapq   => int,
+                                    edist  => int
+                                  ]
+
+=cut
+
+sub getChimericAlignments {
+    my $self = shift;
+    # check the existence of the SA field in the SAM line
+    if (defined $self->{extended_fields}{SA}){
+	my @array_hash;
+	my (@SA_alignments) = split(/;/,$self->{extended_fields}{SA});
+	for (my $i=0 ;  $i < scalar @SA_alignments ; $i++){
+	    my ($chr,$pos,$strand,$cigar,$mapq,$edist) = split(/,/,$SA_alignments[$i]);
+	    # strand switch from "+,-" to "1,-1"
+	    if ($strand eq '+'){
+		$strand = 1;
+	    }else{
+		$strand = -1;
+	    }
+	    my $hash = { chr => $chr, 
+			 pos => $pos,
+			 strand => $strand,
+			 cigar => $cigar,
+			 mapq => $mapq,
+			 edist => $edist};
+	    push(@array_hash,$hash);
+	}
+	return \@array_hash;
+    }
+    return undef;
+}
+
+=head2 getCigarOperatorsCount
+
+  Example     : my %cigar_counts = %{ $sam_line->getCigarOperatorsCount() };
+                print "nb mismatches; ",$cigar_counts{X},"\n";
+  Description : Return a hash reference where the keys are the cigar operators and the values
+                the sum of length associated for each operator.
+                For cigar 5S3M1X2M10S, getCigarOperatorsCounts() will retrun :
+                { 'S' => 15,
+                  'M' => 5,
+                  'X' => 1,
+                };
+  ReturnType  : Hash reference 
+=cut
+
+sub getCigarOperatorsCount {
+  my $self = shift;
+  my @ops = $self->cigar =~ /(\d+\D)/g;
+  my %ops_occ;
+  foreach (@ops) {
+    my ($nb,$op) = $_ =~ /(\d+)(\D)/;
+    $ops_occ{$op} = 0 unless defined $ops_occ{$op};
+    $ops_occ{$op} += $nb;
+  }
+  return \%ops_occ;
+}
+
 =head2 pSupport
 
   Description : Return the support profile of the read if the SAM file has been generated with
@@ -696,14 +762,21 @@ sub genericInfo {
 sub isClassified {
   my $self = shift;
   my $class = shift;
+  
+  croak "Missing class argument" unless defined $class;
 
-  switch($class) {
-    case "unique"       { return $self->{extended_fields}{XU} }
-    case "duplicated"   { return $self->{extended_fields}{XD} }
-    case "multiple"     { return $self->{extended_fields}{XM} }
-    case "normal"       { return $self->{extended_fields}{XN} == 1 }
-    case "almostNormal" { return $self->{extended_fields}{XU} == 2 }
-    else                { return undef }
+  if($class eq "unique") {
+    return $self->{extended_fields}{XU};
+  } elsif($class eq "duplicated") {
+    return $self->{extended_fields}{XD};
+  } elsif($class eq "multiple") {
+    return $self->{extended_fields}{XM};
+  } elsif($class eq "normal") {
+    return $self->{extended_fields}{XN} == 1;
+  } elsif($class eq "almostNormal") {
+    return $self->{extended_fields}{XN} == 2;
+  } else {
+    croak "Class argument ($class) does not match any case";
   }
 }
 

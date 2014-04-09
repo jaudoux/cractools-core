@@ -78,7 +78,7 @@
 
 =head1 NAME
 
-CracTools::Annotator - Generic annotation base on CracTools::GFF::Query.pm
+CracTools::Annotator - Generic annotation base on CracTools::GFF::Query
 
 =cut
 
@@ -155,8 +155,7 @@ sub foundGene {
   Arg [5] : String - pos_end1
   Arg [6] : String - strand
 
-  Description : Return true if a gene is found between [pos_start1.pos_end1] and
-                [pos_start2,pos_end2]
+  Description : Return true if a gene is the same gene is found is the two intervals.
   ReturnType  : Boolean
   Exceptions  : none
 
@@ -181,10 +180,13 @@ sub foundSameGene {
     }
   }
   foreach my $gene_id (@genes1) {
-    if($gene_id ~~ @genes2) {
-      $found_same_gene = 1;
-      last;
+    foreach (@genes2) {
+      if($gene_id eq $_) {
+        $found_same_gene = 1;
+        last;
+      }
     }
+    last if $found_same_gene == 1;
   }
   return $found_same_gene;
 }
@@ -197,7 +199,7 @@ sub foundSameGene {
   Arg [4] : String - strand
   Arg [5] : (Optional) Subroutine - see C<getCandidatePriorityDefault> for more details
 
-  Description : Return best candidate annotation according to the priorities given
+  Description : Return best annotation candidate according to the priorities given
                 by the subroutine in argument.
   ReturnType  : Hash( feature_name => CracTools::GFF::Annotation, ...), Int(priority), String(type)
 
@@ -277,7 +279,7 @@ sub getAnnotationCandidates {
                 for selecting the best annotation.
                 The best priority is 0. A priority of -1 means that this candidate
                 should be avoided.
-  ReturnType  : ($priority,$type)
+  ReturnType  : Array ($priority,$type) where $priority is an integer and $type a string
 
 =cut
 
@@ -320,6 +322,9 @@ sub getCandidatePriorityDefault {
 
 =head2 _init
 
+  Description : init method, load GFF annotation into a
+                CracTools::GFF::Query object.
+
 =cut
 
 sub _init {
@@ -332,6 +337,20 @@ sub _init {
 }
 
 =head2 _constructCandidate
+
+  Arg [1] : String - annot_id
+  Arg [2] : Hash ref - candidate
+            Since this method is recursive, this is the object that
+            we are constructing
+  Arg [3] : Hash ref - annot_hash
+            annot_hash is a hash reference where keys are annotion IDs
+            and values are CracTools::GFF::Annotation objects.
+
+  Description : _constructCandidate is a recursive method that build a
+                candidate hash.
+  ReturnType  : Candidate Hash ref where keys are GFF features and
+                values are CracTools::GFF::Annotation objects :
+                { feature => CracTools::GFF::Annotation, ...}
 
 =cut
 
