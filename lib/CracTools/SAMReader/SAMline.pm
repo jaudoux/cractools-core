@@ -76,12 +76,6 @@
 #                                                                             #
 ###############################################################################
 
-=encoding utf8
-
-=head1 NAME
-
-CracTools::SAMReader::SAMline - The object for manipulation a SAM line.
-
 =head1 SYNOPSIS
 
   use CracTools::SAMReader::SAMline;
@@ -96,7 +90,7 @@ http://samtools.sourceforge.net/SAM1.pdf
 =cut
 
 package CracTools::SAMReader::SAMline;
-
+# ABSTRACT: The object for manipulation a SAM line.
 
 use strict;
 use warnings;
@@ -1116,44 +1110,5 @@ sub compressCracLoc {
   confess("Missing argument") unless defined $chr && defined $pos && defined $strand;
   return $chr."|".$strand.",".$pos;
 }
-
-=head1 AUTHORS
-
-Jerome AUDOUX E<lt>L<jerome.audoux@etud.univ-montp2.fr|mailto:jerome.audoux@univ-montp2.fr>E<gt>.
-
-=head1 COPYRIGHT AND LICENSE
-
-Copyright (C) 2012-2013 -- IRB/INSERM
-                           (Institut de Recherche en Biothérapie /
-                            Institut National de la Santé et de la
-                            Recherche Médicale)
-                           LIRMM/UM2
-                           (Laboratoire d'Informatique, de Robotique et de
-                            Microélectronique de Montpellier /
-                            Université de Montpellier 2)
-
-=head2 FRENCH
-
-Ce fichier  fait partie  du Pipeline  de traitement  de données NGS de la
-plateforme ATGC labélisée par le GiS IBiSA.
-
-Ce logiciel est régi  par la licence CeCILL  soumise au droit français et
-respectant les principes  de diffusion des logiciels libres.  Vous pouvez
-utiliser, modifier et/ou redistribuer ce programme sous les conditions de
-la licence CeCILL  telle que diffusée par le CEA,  le CNRS et l'INRIA sur
-le site "http://www.cecill.info".
-
-=head2 ENGLISH
-
-This File is part of the NGS data processing Pipeline of the ATGC
-accredited by the IBiSA GiS.
-
-This software is governed by the CeCILL license under French law and
-abiding by the rules of distribution of free software. You can use,
-modify and/ or redistribute the software under the terms of the CeCILL
-license as circulated by CEA, CNRS and INRIA at the following URL
-"http://www.cecill.info".
-
-=cut
 
 1;

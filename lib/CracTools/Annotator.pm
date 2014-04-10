@@ -76,13 +76,8 @@
 #                                                                             #
 ###############################################################################
 
-=head1 NAME
-
-CracTools::Annotator - Generic annotation base on CracTools::GFF::Query
-
-=cut
-
 package CracTools::Annotator;
+# ABSTRACT: Generic annotation base on CracTools::GFF::Query
 
 use strict;
 use warnings;

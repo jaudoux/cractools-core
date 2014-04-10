@@ -76,10 +76,6 @@
 #                                                                             #
 ###############################################################################
 
-=head1 NAME
-
-CracTools::Output - A module to manage CracTools output files.
-
 =head1 SYNOPSIS
 
   # Creating a default output object.
@@ -105,6 +101,7 @@ CracTools::Output is a simple tool to generate Char-Separated files.
 =cut
 
 package CracTools::Output;
+# ABSTRACT: A module to manage CracTools output files.
 
 use strict;
 use warnings;
@@ -177,7 +174,7 @@ sub printHeaders {
   }
 
   $self->printlnOutput("# Date: ".localtime);
-  $self->printlnOutput("# Module: $CracTools::PACKAGE_NAME (v $CracTools::VERSION)");
+  $self->printlnOutput("# Module: $CracTools::DIST (v $CracTools::VERSION)");
   if(defined $version) {
     $self->printlnOutput("# Script: ".basename($0)." (v $version)");
   } else {

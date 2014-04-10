@@ -76,15 +76,8 @@
 #                                                                             #
 ###############################################################################
 
-=head1 NAME
-
-CracTools::Const - Constants for the CracTools-core
-
-=head1 CONSTANTS
-
-=cut
-
 package CracTools::Const;
+# ABSTRACT: Constants for the CracTools-core
 
 use strict;
 use warnings;

@@ -76,10 +76,6 @@
 #                                                                             #
 ###############################################################################
 
-=head1 NAME
-
-CracTools::GFF::Annotation - Parse GFF lines.
-
 =head1 SYNOPSIS
 
 Usage:
@@ -103,6 +99,7 @@ CracTools::GFF::Annotataion is an object to parse and access GFF line's fields.
 =cut
 
 package CracTools::GFF::Annotation;
+# ABSTRACT: Parse GFF lines.
 
 use Carp;
 

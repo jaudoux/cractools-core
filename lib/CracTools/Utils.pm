@@ -76,13 +76,8 @@
 #                                                                             #
 ###############################################################################
 
-=head1 NAME
-
-CracTools::Utils - A set of useful functions
-
-=cut
-
 package CracTools::Utils;
+# ABSTRACT: A set of useful functions
 
 use strict;
 use warnings;

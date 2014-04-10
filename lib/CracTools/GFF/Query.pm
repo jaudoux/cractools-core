@@ -76,10 +76,6 @@
 #                                                                             #
 ###############################################################################
 
-=head1 NAME
-
-CracTools::GFF::Query - Query GFF files easily.
-
 =head1 SYNOPSIS
 
 Usage:
@@ -107,6 +103,7 @@ into a nice usable Perl Object.
 =cut
 
 package CracTools::GFF::Query;
+# ABSTRACT: Query GFF files easily.
 
 use strict;
 use warnings;
