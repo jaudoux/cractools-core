@@ -83,7 +83,7 @@ use strict;
 use warnings;
 use POSIX;
 
-use Config::FileManager;
+use Config::FileManager 1.6;
 use Config::Simple;
 use File::Basename;
 use File::HomeDir;
