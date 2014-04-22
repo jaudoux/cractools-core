@@ -85,7 +85,8 @@ use warnings;
 use Carp;
 use Data::Dumper;
 use CracTools::GFF::Annotation;
-use CracTools::GFF::Query;
+#use CracTools::GFF::Query;
+use CracTools::Interval::Query;
 use CracTools::Const;
 
 =head1 METHODS
@@ -326,7 +327,7 @@ sub _init {
   my $self = shift;
 
   # Create a GFF file to query exons
-  my $gff_query = CracTools::GFF::Query->new($self->{gff_file});
+  my $gff_query = CracTools::Interval::Query->new(file => $self->{gff_file}, type => 'gff');
   $self->{gff_query} = $gff_query;
 
 }

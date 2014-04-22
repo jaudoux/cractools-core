@@ -131,4 +131,17 @@ sub reverse_tab($) {
   return $newString;
 }
 
+=head2 convertStrand
+  
+  Arg [1] : Character - strand
+
+  Description : Retrun the strand converted + => 1 or 1 => +
+=cut
+
+my %conversion_hash = ( '+' => 1, '-' => '-1', '1' => '+', '-1' => '-');
+sub convertStrand($) {
+  my $strand = shift;
+  return $conversion_hash{$strand};
+}
+
 1;
