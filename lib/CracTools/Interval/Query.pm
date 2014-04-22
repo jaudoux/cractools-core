@@ -86,8 +86,8 @@ sub new {
 sub fetchByRegion {
   my ($self,$chr,$pos_start,$pos_end,$strand,$windowed) = @_;
 
-  my $interval_tree = $self->{interval_trees}{_getIntervalTreeKey($chr,$strand)};
-  my @lines;
+  my $interval_tree = $self->_getIntervalTree($chr,$strand);
+  my $lines = [];
   
   if(defined $interval_tree) {
     my $seek_values;
@@ -99,16 +99,10 @@ sub fetchByRegion {
       $seek_values = $interval_tree->fetch($pos_start,$pos_end+1);
     }
 
-    my $fh = $self->{filehandle};
-
-    foreach (@$seek_values) {
-      seek($fh,$_,SEEK_SET);
-      my $line = <$fh>;
-      push(@lines,$line);
-    }
+    $lines = $self->_getLines($seek_values);
   }
 
-  return \@lines;
+  return $lines;
 }
 
 =head2 fetchByLocation
@@ -131,6 +125,197 @@ sub fetchByRegion {
 sub fetchByLocation {
   my ($self,$chr,$position,$strand) = @_;
   return $self->fetchByRegion($chr,$position,$position,$strand);
+}
+
+=head2 fetchNearestDown
+
+Search for the closest interval in downstream that does not contain the query
+and returns the line associated to this interval. 
+
+=cut
+
+sub fetchNearestDown {
+  my ($self,$chr,$position,$strand) = @_;
+
+  my $interval_tree = $self->_getIntervalTree($chr,$strand);
+  my $line;
+  
+  if(defined $interval_tree) {
+    my $seek_pos = $interval_tree->fetch_nearest_down($position);
+    $line = $self->_getLine($seek_pos) if defined $seek_pos;
+  }
+  return $line;
+}
+
+=head2 fetchAllNearestDown
+
+Search for the closest intervals in downstream that does not contain the query
+and returns an array reference of lines associated to these intervals. 
+
+=cut
+
+sub fetchAllNearestDown {
+  my ($self,$chr,$position,$strand) = @_;
+  my @lines;
+
+  my $nearest_down = $self->fetchNearestDown($chr,$position,$strand); 
+
+  if(defined $nearest_down) {
+    my $intervals = $self->_getIntervals($nearest_down);
+    # We try to determinate wich interval was matched
+    my $best_interval;
+    foreach my $i (@$intervals) {
+      $i->{strand} = 1 unless defined $i->{strand};
+      if ( $i->{high}    <  $position && 
+           $i->{seqname} eq $chr      && 
+           $i->{strand}  eq $strand ) {
+        if(!defined $best_interval) {
+          $best_interval = $i;
+        } elsif ($best_interval->{high} < $i->{high}) {
+          $best_interval = $i;
+        }
+      }
+    }
+    # We return all lines that belong to this
+    if(defined $best_interval) {
+      my $overlapping_lines = $self->fetchByLocation($chr,$best_interval->{high},$strand);
+      foreach my $line (@$overlapping_lines) {
+        my $intervals = $self->_getIntervals($line);
+        foreach my $i (@$intervals) {
+          if($i->{high}     ==  $best_interval->{high} && 
+             $i->{seqname}  eq  $chr && 
+             $i->{strand}   eq  $strand) {
+            push(@lines,$line);
+            last;
+          }
+        }
+      }
+    }
+  }
+  return \@lines;
+}
+
+=head2 fetchNearestUp
+
+Search for the closest interval in downstream that does not contain the query
+and returns the line associated to this interval. 
+
+=cut
+
+sub fetchNearestUp {
+  my ($self,$chr,$position,$strand) = @_;
+
+  my $interval_tree = $self->_getIntervalTree($chr,$strand);
+  my $line;
+  
+  if(defined $interval_tree) {
+    my $seek_pos = $interval_tree->fetch_nearest_up($position);
+    $line = $self->_getLine($seek_pos) if defined $seek_pos;
+  }
+  return $line;
+}
+
+=head2 fetchAllNearestUp
+
+Search for the closest intervals in downstream that does not contain the query
+and returns an array reference of lines associated to these intervals. 
+
+=cut
+
+sub fetchAllNearestUp {
+  my ($self,$chr,$position,$strand) = @_;
+  my @lines;
+
+  my $nearest_down = $self->fetchNearestUp($chr,$position,$strand); 
+
+  if(defined $nearest_down) {
+    my $intervals = $self->_getIntervals($nearest_down);
+    # We try to determinate wich interval was matched
+    my $best_interval;
+    foreach my $i (@$intervals) {
+      $i->{strand} = 1 unless defined $i->{strand};
+      if ( $i->{low}    >  $position && 
+           $i->{seqname} eq $chr      && 
+           $i->{strand}  eq $strand ) {
+        if(!defined $best_interval) {
+          $best_interval = $i;
+        } elsif ($best_interval->{low} > $i->{low}) {
+          $best_interval = $i;
+        }
+      }
+    }
+    # We return all lines that belong to this
+    if(defined $best_interval) {
+      my $overlapping_lines = $self->fetchByLocation($chr,$best_interval->{low},$strand);
+      foreach my $line (@$overlapping_lines) {
+        my $intervals = $self->_getIntervals($line);
+        foreach my $i (@$intervals) {
+          if($i->{low}     ==  $best_interval->{low} && 
+             $i->{seqname}  eq  $chr && 
+             $i->{strand}   eq  $strand) {
+            push(@lines,$line);
+            last;
+          }
+        }
+      }
+    }
+  }
+  return \@lines;
+}
+
+=head2 _getIntervals
+
+Return an array reference of intervals associated with the line.
+
+Interval structure is described by get_interval_sub
+
+=cut
+
+sub _getIntervals {
+  my ($self,$line) = @_;
+  my $intervals = $self->{get_interval_sub}->($line);
+  foreach (@$intervals) {$_->{strand} = 1 if !defined $_{strand};}
+  return $intervals;
+}
+
+=head2 _getLine
+
+=cut
+
+sub _getLine {
+  my ($self,$seek_pos) = @_;
+  my $fh = $self->{filehandle};
+  seek($fh,$seek_pos,SEEK_SET);
+  return <$fh>;
+}
+
+=head2 _getLines
+
+=cut
+
+sub _getLines {
+  my ($self,$seek_pos) = @_;
+  my @lines;
+  my $fh = $self->{filehandle};
+  foreach (@$seek_pos) {
+    seek($fh,$_,SEEK_SET);
+    my $line = <$fh>;
+    push(@lines,$line);
+  }
+  return \@lines;
+}
+
+=head2 _getIntervalTree 
+
+  $self->getIntervalTree($chr,$strand);
+
+Return the interval tree reference for the chromosome and strand
+
+=cut
+
+sub _getIntervalTree {
+  my ($self,$chr,$strand) = @_;
+  return $self->{interval_trees}{_getIntervalTreeKey($chr,$strand)};
 }
 
 sub _init {
@@ -169,6 +354,7 @@ sub _init {
 
         # high +1 beacause Interval tree use [a,b) intervals
         $interval_trees{$key}->insert($pos,$i->{low},$i->{high}+1);
+        #$interval_trees{$key}->insert({seek => $pos, low => $i->{low}, high => $i->{high}},$i->{low},$i->{high}+1);
       }
     }
 
@@ -268,3 +454,5 @@ sub _getIntervalTreeKey {
   my ($chr,$strand) = @_;
   return "$chr"."@"."$strand";
 }
+
+1;

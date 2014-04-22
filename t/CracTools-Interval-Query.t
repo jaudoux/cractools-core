@@ -3,10 +3,10 @@
 use strict;
 use warnings;
 
-use Test::More tests => 17;
+use Test::More tests => 22;
 use CracTools::Interval::Query;
-use File::Temp;
-use Inline::Files;
+use File::Temp 0.23;
+use Inline::Files 0.68;
 
 my $gff_line = "1\tEnsembl\texon\t1\t10\t.\t+\t0\n";
 my $sam_line = "HWI-ST170:310:8:1101:1477-2249/2\t161\t12\t49333532\t254\t30M217N35M\t12\t49334794\t0\tCGATCATTGCTGTCGACCACAAATATCAACCCTTGGGTGTTCTGGAAGTAGTGTCTCCAGAGGGG\t__[ceccececggfhhfhf^ggagghhiifhifhhf^^eeeeefdfhcf`aabfcddgggf^";
@@ -44,15 +44,22 @@ my $intervalQuery = CracTools::Interval::Query->new(file => $gff_file,
                                                type => 'gff',
                                              );
 
-is(@{$intervalQuery->fetchByLocation(1,3,1)}, 3, 'findAnnotations() (1)');
-is(@{$intervalQuery->fetchByLocation(1,3,'-1')}, 0, 'findAnnotations() (2)');
-is(@{$intervalQuery->fetchByLocation(1,4,'1')}, 2, 'findAnnotations() (3)');
-ok($intervalQuery->fetchByLocation(1,10,'1')->[0] =~ /1\t10\t\.\t\+/, 'findAnnotations() (4)');
+is(@{$intervalQuery->fetchByLocation(1,3,1)}, 3, 'fetchByLocation (1)');
+is(@{$intervalQuery->fetchByLocation(1,3,'-1')}, 0, 'fetchByLocation (2)');
+is(@{$intervalQuery->fetchByLocation(1,4,'1')}, 2, 'fetchByLocation (3)');
+ok($intervalQuery->fetchByLocation(1,10,'1')->[0] =~ /line1/, 'fetchByLocation (4)');
 is($intervalQuery->fetchByRegion(1,3,3,1)->[0],$intervalQuery->fetchByLocation(1,3,1)->[0],'fetchByRegion');
+is(@{$intervalQuery->fetchAllNearestDown(2,9,1)},2,'fetchAllNearestDown (1)');
+is(@{$intervalQuery->fetchAllNearestDown(1,4,1)},1,'fetchAllNearestDown (2)');
+ok($intervalQuery->fetchAllNearestDown(1,4,1)->[0] =~ /line2/,'fetchAllNearestDown (3)');
+is(@{$intervalQuery->fetchAllNearestUp(2,2,1)},2,'fetchAllNearestUp (1)');
+ok($intervalQuery->fetchAllNearestUp(1,2,1)->[0] =~ /line3/,'fetchAllNearestUp (2)');
 
 __GFF__
-1	Ensembl	exon	1	10	.	+	0
-1	Ensembl	exon	2	3	.	+	0
-1	Ensembl	exon	3	9	.	+	0
-1	Ensembl	exon	1	2	.	-	0
-2	Ensembl	exon	4	8	.	+	0
+1	line1	exon	1	10	.	+	0
+1	line2	exon	2	3	.	+	0
+1	line3	exon	3	9	.	+	0
+1	line4	exon	1	2	.	-	0
+2	line5	exon	4	8	.	+	0
+2	line5	exon	5	10	.	+	0
+2	line6	gene	4	8	.	+	0
