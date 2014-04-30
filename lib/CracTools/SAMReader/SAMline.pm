@@ -766,9 +766,9 @@ sub isClassified {
   } elsif($class eq "multiple") {
     return $self->{extended_fields}{XM};
   } elsif($class eq "normal") {
-    return $self->{extended_fields}{XN} == 1;
+    defined $self->{extended_fields}{XN} ? return $self->{extended_fields}{XN} == 1 : return undef;
   } elsif($class eq "almostNormal") {
-    return $self->{extended_fields}{XN} == 2;
+    defined $self->{extended_fields}{XN} ? return $self->{extended_fields}{XN} == 2 : return undef;
   } else {
     croak "Class argument ($class) does not match any case";
   }
