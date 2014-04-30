@@ -286,7 +286,9 @@ sub _getLine {
   my ($self,$seek_pos) = @_;
   my $fh = $self->{filehandle};
   seek($fh,$seek_pos,SEEK_SET);
-  return <$fh>;
+  my $line = <$fh>;
+  chomp($line);
+  return $line;
 }
 
 =head2 _getLines
@@ -300,6 +302,7 @@ sub _getLines {
   foreach (@$seek_pos) {
     seek($fh,$_,SEEK_SET);
     my $line = <$fh>;
+    chomp($line);
     push(@lines,$line);
   }
   return \@lines;
