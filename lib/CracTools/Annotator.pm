@@ -286,14 +286,14 @@ sub getCandidatePriorityDefault {
   if(defined $mRNA) {
     if($mRNA->attribute('type') =~ /protein_coding/i) {
       if(defined $exon) {
-        if($exon->start > $pos_start || $exon->end < $pos_end) {
+        if(($exon->start <= $pos_start) && ($exon->end >= $pos_end)) {
           $priority = 1;
           if(defined $candidate->{three}) {
             $type = '3PRIM_UTR';
           } elsif(defined $candidate->{five}) {
             $type = '5PRIM_UTR';
-          } elsif(defined $candidate->{cds}) {
-            $type = 'CDS';
+          # } elsif(defined $candidate->{cds}) {
+          #   $type = 'CDS';
           } else {
             $type = 'EXON';
           }
@@ -301,10 +301,13 @@ sub getCandidatePriorityDefault {
           $priority = 2;
           $type = 'INXON';
         }
+      } else {
+	$priority = 4;
+	$type = 'INTRON';
       }
     } else {
       if(defined $exon) {
-        if($exon->start > $pos_start || $exon->end < $pos_end) {
+        if(($exon->start <= $pos_start) && ($exon->end >= $pos_end)) {
           $priority = 3;
           $type = 'NON_CODING';
         }
