@@ -139,7 +139,7 @@ sub foundGene {
   my $self = shift;
   my ($chr,$pos_start,$pos_end,$strand) = @_;
   my @candidates = $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand);
-  return @candidates > 0;
+  return (scalar @candidates > 0);
 }
 
 =head2 foundSameGene
@@ -255,7 +255,7 @@ sub getAnnotationCandidates {
   foreach my $annot_id (keys %annot_hash) {
     my @parents = $annot_hash{$annot_id}->parents;
 
-    # we have foud a root, lets constructs candidates
+    # we have found a root, lets constructs candidates
     if(scalar @parents == 0) {
       push @candidates, _constructCandidate($annot_id,my $new_candidate,\%annot_hash);
     }
