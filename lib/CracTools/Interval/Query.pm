@@ -159,14 +159,13 @@ sub fetchAllNearestDown {
   my @lines;
 
   my $nearest_down = $self->fetchNearestDown($chr,$position,$strand); 
-
   if(defined $nearest_down) {
     my $intervals = $self->_getIntervals($nearest_down);
     # We try to determinate wich interval was matched
     my $best_interval;
     foreach my $i (@$intervals) {
-      $i->{strand} = 1 unless defined $i->{strand};
-      if ( $i->{high}    <  $position && 
+	$i->{strand} = 1 unless defined $i->{strand};
+	if ( $i->{high}    <  $position && 
            $i->{seqname} eq $chr      && 
            $i->{strand}  eq $strand ) {
         if(!defined $best_interval) {
@@ -274,7 +273,7 @@ Interval structure is described by get_interval_sub
 sub _getIntervals {
   my ($self,$line) = @_;
   my $intervals = $self->{get_interval_sub}->($line);
-  foreach (@$intervals) {$_->{strand} = 1 if !defined $_{strand};}
+  foreach (@$intervals) {$_->{strand} = 1 if !defined $_->{strand};}
   return $intervals;
 }
 

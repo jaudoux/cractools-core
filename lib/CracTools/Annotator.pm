@@ -87,6 +87,7 @@ use Data::Dumper;
 use CracTools::GFF::Annotation;
 #use CracTools::GFF::Query;
 use CracTools::Interval::Query;
+use List::Util qw[min max];
 use CracTools::Const;
 
 =head1 METHODS
@@ -138,7 +139,7 @@ sub new {
 sub foundGene {
   my $self = shift;
   my ($chr,$pos_start,$pos_end,$strand) = @_;
-  my @candidates = $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand);
+  my @candidates = @{ $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand)};
   return (scalar @candidates > 0);
 }
 
@@ -160,8 +161,8 @@ sub foundGene {
 sub foundSameGene {
   my $self = shift;
   my ($chr,$pos_start1,$pos_end1,$pos_start2,$pos_end2,$strand) = @_;
-  my @candidates1 = $self->getAnnotationCandidates($chr,$pos_start1,$pos_end1,$strand);
-  my @candidates2 = $self->getAnnotationCandidates($chr,$pos_start2,$pos_end2,$strand);
+  my @candidates1 = @{ $self->getAnnotationCandidates($chr,$pos_start1,$pos_end1,$strand)};
+  my @candidates2 = @{ $self->getAnnotationCandidates($chr,$pos_start2,$pos_end2,$strand)};
   my $found_same_gene = 0;
   my @genes1;
   my @genes2;
@@ -194,6 +195,7 @@ sub foundSameGene {
   Arg [3] : String - pos_end
   Arg [4] : String - strand
   Arg [5] : (Optional) Subroutine - see C<getCandidatePriorityDefault> for more details
+  Arg [6] : (Optional) Subroutine - see C<compareTwoCandidatesDefault> for more details
 
   Description : Return best annotation candidate according to the priorities given
                 by the subroutine in argument.
@@ -203,19 +205,29 @@ sub foundSameGene {
 
 sub getBestAnnotationCandidate {
   my $self = shift;
-  my ($chr,$pos_start,$pos_end,$strand,$prioritySub) = @_;
+  my ($chr,$pos_start,$pos_end,$strand,$prioritySub,$compareSub) = @_;
 
   $prioritySub = \&getCandidatePriorityDefault unless defined $prioritySub;
+  $compareSub = \&compareTwoCandidatesDefault unless defined $compareSub;
 
-  my @candidates = $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand);
-  my ($best_priority,$best_candidate,$best_type);
+  my @candidates = @{ $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand)};
+  my ($best_priority,$best_candidate,$best_type,$candidate_chosen);
   foreach my $candi (@candidates) {
     my ($priority,$type) = $prioritySub->($pos_start,$pos_end,$candi);
     if($priority != -1) {
       if(!defined $best_priority || $priority < $best_priority) {
-        $best_priority = $priority;
+	$best_priority = $priority;
         $best_candidate = $candi;
         $best_type = $type;
+      }
+      #we should compare two candidates with equal priority to always choose the one
+      elsif ($priority == $best_priority){
+	$candidate_chosen = $compareSub->($best_candidate,$candi,$pos_start);
+	if (defined $candidate_chosen && ($candidate_chosen == $candi)){
+            $best_priority = $priority;
+            $best_candidate = $candi;
+            $best_type = $type;
+        }
       }
     }
   }
@@ -241,27 +253,55 @@ sub getAnnotationCandidates {
 
   # get GFF annotations that overlap the region to annotate
   my $annotations = $self->{gff_query}->fetchByRegion($chr,$pos_start,$pos_end,$strand);
+  # get a ref of an array of hash of candidates
+  my $candidatates = _constructCandidatesFromAnnotation($annotations);
+  return $candidatates;
+}
 
-  my %annot_hash = ();
-  my @candidates = ();
+=head2 getAnnotationNearestDownCandidates
 
-  # Construct annotation hash with annot ID as key
-  foreach my $annot_line (@{$annotations}) {
-    my $annot = CracTools::GFF::Annotation->new($annot_line,'gff3');
-    $annot_hash{$annot->attribute('ID')} = $annot;
-  }
+  Arg [1] : String - chr
+  Arg [2] : String - pos_start
+  Arg [3] : String - strand
 
-  # Find root in annotation tree
-  foreach my $annot_id (keys %annot_hash) {
-    my @parents = $annot_hash{$annot_id}->parents;
+  Description : Return an array with all annotation candidates nearest down the
+                query region (without overlap).
+  ReturnType  : Array of Hash( feature_name => CracTools::GFF::Annotation, ...)
 
-    # we have found a root, lets constructs candidates
-    if(scalar @parents == 0) {
-      push @candidates, _constructCandidate($annot_id,my $new_candidate,\%annot_hash);
-    }
-  }
+=cut
 
-  return @candidates;
+sub getAnnotationNearestDownCandidates {
+  my $self = shift;
+  my ($chr,$pos_start,$strand) = @_;
+
+  # get GFF annotations of nearest down intervals that not overlaped [pos_start,pos_end] pos 
+  my $annotations = $self->{gff_query}->fetchAllNearestDown($chr,$pos_start,$strand);
+  # get a ref of an array of hash of candidates
+  my $candidatates = _constructCandidatesFromAnnotation($annotations);
+  return $candidatates;
+}
+
+=head2 getAnnotationNearestUpCandidates
+
+  Arg [1] : String - chr
+  Arg [2] : String - pos_end
+  Arg [3] : String - strand
+
+  Description : Return an array with all annotation candidates nearest up the
+                query region (without overlap).
+  ReturnType  : ArrayRef of HashRef{ feature_name => CracTools::GFF::Annotation, ...}
+
+=cut
+
+sub getAnnotationNearestUpCandidates {
+  my $self = shift;
+  my ($chr,$pos_end,$strand) = @_;
+
+  # get GFF annotations of nearest up intervals that not overlaped [pos_start,pos_end] pos 
+  my $annotations = $self->{gff_query}->fetchAllNearestUp($chr,$pos_end,$strand);
+  # get a ref of an array of hash of candidates
+  my $candidatates = _constructCandidatesFromAnnotation($annotations);
+  return $candidatates;
 }
 
 =head2 getCandidatePriorityDefault
@@ -317,6 +357,37 @@ sub getCandidatePriorityDefault {
   return ($priority,$type);
 }
 
+=head2 compareTwoCandidatesDefault
+
+  Arg [1] : hash - candidate1
+  Arg [2] : hash - candidate2
+  Arg [3] : pos_start
+
+  Description : Default method used to chose the best candidat when priority are equals
+                You can create your own priority method to fit your specific need
+                for selecting the best candidat.
+  ReturnType  : hash - best candidat
+
+=cut
+sub compareTwoCandidatesDefault{
+    my ($candidate1,$candidate2,$pos_start) = @_;
+    if ($candidate1->{exon} && $candidate2->{exon}){ 
+	my $dist1= min(abs($candidate1->{exon}->end - $pos_start),abs($candidate1->{exon}->start - $pos_start));
+	my $dist2= min(abs($candidate2->{exon}->end - $pos_start),abs($candidate2->{exon}->start - $pos_start));
+	if ($dist1 > $dist2){
+	    return $candidate2;
+	}else{
+	    return $candidate1;
+	}
+    }else{
+	return undef;
+    }
+    
+}
+
+
+
+
 =head1 PRIVATE METHODS
 
 =head2 _init
@@ -356,15 +427,57 @@ sub _init {
 sub _constructCandidate {
   my ($annot_id,$candidate,$annot_hash) = @_;
   $candidate->{$annot_hash->{$annot_id}->feature} = $annot_hash->{$annot_id};
-  foreach my $annot (values %{$annot_hash}) {
-    my @parents = $annot->parents;
+  # foreach my $annot (values %{$annot_hash}) {
+    # my @parents = $annot->parents;
+    my @parents = $annot_hash->{$annot_id}->parents;
     foreach my $parent (@parents) {
-      if($parent eq $annot_id) {
-        _constructCandidate($annot->attribute('ID'),$candidate,$annot_hash);
-      }
+      # if($parent eq $annot_id) {
+	_constructCandidate($parent,$candidate,$annot_hash);
+        # _constructCandidate($annot->attribute('ID'),$candidate,$annot_hash);
+      # }
     }
-  }
+  # }
   return $candidate;
+}
+
+
+=head2 _constructCandidatesFromAnnotation
+
+  Arg [1] : Hash ref - annotations
+            Annotions is a hash reference where keys are coordinates
+            given by CracTools::Interval::Query objects.
+  Description : _constructCandidate is a recursive method that build a
+                candidate hash.
+  ReturnType  : Candidate array ref of all candidates built by _constructCandidate
+
+=cut
+sub _constructCandidatesFromAnnotation {
+  my $annotations = shift;
+  my %annot_hash = ();
+  my @candidates = ();
+
+  # Construct annotation hash with annot ID as key
+  foreach my $annot_line (@{$annotations}) {
+    my $annot = CracTools::GFF::Annotation->new($annot_line,'gff3');
+    $annot_hash{$annot->attribute('ID')} = $annot;
+  }
+
+  # Find leaves in annotation tree
+  my %hash_leaves; 
+  foreach my $annot_id (keys %annot_hash) {
+      my @parents = $annot_hash{$annot_id}->parents;
+      foreach my $parent (@parents){
+	  $hash_leaves{$parent} = 1 unless (defined $hash_leaves{$parent});
+      }
+  }
+  foreach my $annot_id (keys %annot_hash) {
+      # check if annot_id is a leaf
+      if (!defined $hash_leaves{$annot_id}){
+	  push @candidates, _constructCandidate($annot_id,my $new_candidate,\%annot_hash);
+      }
+  }
+
+  return \@candidates;
 }
 
 1;

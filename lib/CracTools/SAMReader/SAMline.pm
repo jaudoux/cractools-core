@@ -315,7 +315,7 @@ sub getPatch {
 
 =head2 line
 
-  Description : Getterr for the whole SAMline as a string.
+  Description : Getter for the whole SAMline as a string.
   ReturnType  : String
   Exceptions  : none
 

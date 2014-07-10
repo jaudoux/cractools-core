@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 22;
+use Test::More tests => 24;
 use CracTools::Interval::Query;
 use File::Temp 0.23;
 use Inline::Files 0.68;
@@ -37,7 +37,6 @@ is($interval->[1]{high},5000);
 # Create a temp file with the SAM lines described above
 my $gff_file = new File::Temp( SUFFIX => '.gff', UNLINK => 1);
 while(<GFF>) {print $gff_file $_;}
-#print $gff_file $gff;
 close $gff_file;
 
 my $intervalQuery = CracTools::Interval::Query->new(file => $gff_file,
@@ -54,6 +53,9 @@ is(@{$intervalQuery->fetchAllNearestDown(1,4,1)},1,'fetchAllNearestDown (2)');
 ok($intervalQuery->fetchAllNearestDown(1,4,1)->[0] =~ /line2/,'fetchAllNearestDown (3)');
 is(@{$intervalQuery->fetchAllNearestUp(2,2,1)},2,'fetchAllNearestUp (1)');
 ok($intervalQuery->fetchAllNearestUp(1,2,1)->[0] =~ /line3/,'fetchAllNearestUp (2)');
+ok($intervalQuery->fetchAllNearestDown(2,120,-1)->[0] =~ /line7/,'fetchAllNearestDown (3)');
+ok($intervalQuery->fetchAllNearestUp(2,20,-1)->[0] =~ /line7/,'fetchAllNearestUp (3)');
+
 
 __GFF__
 1	line1	exon	1	10	.	+	0
@@ -63,3 +65,4 @@ __GFF__
 2	line5	exon	4	8	.	+	0
 2	line5	exon	5	10	.	+	0
 2	line6	gene	4	8	.	+	0
+2	line7	gene	34	48	.	-	0
