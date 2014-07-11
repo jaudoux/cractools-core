@@ -426,17 +426,22 @@ sub _init {
 
 sub _constructCandidate {
   my ($annot_id,$candidate,$annot_hash) = @_;
+  if (!defined $annot_hash->{$annot_id}->feature){
+      carp("Missing feature for $annot_id in the gff file");
+  }
   $candidate->{$annot_hash->{$annot_id}->feature} = $annot_hash->{$annot_id};
   # foreach my $annot (values %{$annot_hash}) {
     # my @parents = $annot->parents;
     my @parents = $annot_hash->{$annot_id}->parents;
     foreach my $parent (@parents) {
-      # if($parent eq $annot_id) {
+      #Test to avoid a deep recursion
+      if($parent eq $annot_id) {
+	carp("Parent could not be the candidat itself, please check your gff file for $annot_id");
+	next;
+      }else{
 	_constructCandidate($parent,$candidate,$annot_hash);
-        # _constructCandidate($annot->attribute('ID'),$candidate,$annot_hash);
-      # }
+      }
     }
-  # }
   return $candidate;
 }
 
