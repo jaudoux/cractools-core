@@ -426,7 +426,7 @@ sub _init {
 
 sub _constructCandidate {
   my ($annot_id,$candidate,$annot_hash) = @_;
-  if (!defined $annot_hash->{$annot_id}->feature){
+  if (!defined $annot_hash->{$annot_id}){
       carp("Missing feature for $annot_id in the gff file");
   }
   $candidate->{$annot_hash->{$annot_id}->feature} = $annot_hash->{$annot_id};
