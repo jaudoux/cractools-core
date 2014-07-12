@@ -274,10 +274,14 @@ sub getAnnotationNearestDownCandidates {
   my $self = shift;
   my ($chr,$pos_start,$strand) = @_;
 
+  # get GFF annotations that overlap the pos_start to annotate
+  my $annotations_overlap = $self->{gff_query}->fetchByLocation($chr,$pos_start,$strand);
   # get GFF annotations of nearest down intervals that not overlaped [pos_start,pos_end] pos 
-  my $annotations = $self->{gff_query}->fetchAllNearestDown($chr,$pos_start,$strand);
+  my $annotations_down = $self->{gff_query}->fetchAllNearestDown($chr,$pos_start,$strand);
+
   # get a ref of an array of hash of candidates
-  my $candidatates = _constructCandidatesFromAnnotation($annotations);
+  my @annotations = (@$annotations_overlap,@$annotations_down);
+  my $candidatates = _constructCandidatesFromAnnotation(\@annotations);
   return $candidatates;
 }
 
@@ -297,10 +301,14 @@ sub getAnnotationNearestUpCandidates {
   my $self = shift;
   my ($chr,$pos_end,$strand) = @_;
 
+  # get GFF annotations that overlap the pos_end to annotate
+  my $annotations_overlap = $self->{gff_query}->fetchByLocation($chr,$pos_end,$strand);
   # get GFF annotations of nearest up intervals that not overlaped [pos_start,pos_end] pos 
-  my $annotations = $self->{gff_query}->fetchAllNearestUp($chr,$pos_end,$strand);
+  my $annotations_up = $self->{gff_query}->fetchAllNearestUp($chr,$pos_end,$strand);
+
   # get a ref of an array of hash of candidates
-  my $candidatates = _constructCandidatesFromAnnotation($annotations);
+  my @annotations = (@$annotations_overlap,@$annotations_up);
+  my $candidatates = _constructCandidatesFromAnnotation(\@annotations);
   return $candidatates;
 }
 
