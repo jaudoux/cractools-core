@@ -23,7 +23,7 @@ use Bio::EnsEMBL::ApiVersion;
     buildGFF3FromEnsembl.pl [-h|--f] [--output <output_file>] [--est] <genome> 
     The mandatory argument is a genome which is indexed in Ensembl GB. 
     For example:
-             'Homo Sapiens' for Human (default),
+             'Homo Sapiens' for Human,
              'Pan troglodytes' for Chimpanzee,
              'Mus musculus' for Mouse,
              'Macaca mulatta' for Macaque,
@@ -204,14 +204,22 @@ foreach my $gene (@genes){
 
     my $exon_rank_gene = 1;    
     my %exons;
+    my %same_exons;
     foreach my $exon (@exons_gene){
 	my $exon_id = $exon->stable_id() or die("exon id is required");
 	my $exon_start = $exon->start() or die("exon start is required");
 	my $exon_end = $exon->end() or die("exon end is required");
-	$exons{$exon_id}{'START'} = $exon_start; 
-	$exons{$exon_id}{'END'} = $exon_end; 
-	$exons{$exon_id}{'RANK'} = $exon_rank_gene;
-	$exon_rank_gene++;
+	# Sometimes, exons have the same START and END in ensembl for the same gene, so we correct that
+	if (!defined $same_exons{$exon_start."@".$exon_end}){
+	    $exons{$exon_id}{'START'} = $exon_start; 
+	    $exons{$exon_id}{'END'} = $exon_end; 
+	    $exons{$exon_id}{'RANK'} = $exon_rank_gene;
+	    $exons{$exon_id}{'REDUNDANT'} = NONE;
+	    $exon_rank_gene++;
+	    $same_exons{$exon_start."@".$exon_end} = $exon_id;
+    	}else{
+	    $exons{$exon_id}{'REDUNDANT'} = $same_exons{$exon_start."@".$exon_end};
+	}
     }
     
     my @transcripts = @{ $gene->get_all_Transcripts() };
@@ -223,6 +231,10 @@ foreach my $gene (@genes){
     my ($five_start,$five_end,$three_start,$three_end);
     foreach my $transcript (@transcripts){
 	my $transcript_id = $transcript->stable_id() or die("transcript id is required");
+	# Sometimes, transcript_id is the same that gene_id but it is a problem so we check that
+	if ($transcript_id eq $gene_id){
+	    $transcript_id .= ".mRNA";
+	}
 	my $transcript_start = $transcript->start() or die("transcript start is required");
 	my $transcript_end = $transcript->end() or die("transcript end is required");
 	my $cds_start = defined $transcript->coding_region_start() ? $transcript->coding_region_start():NONE;
@@ -244,6 +256,11 @@ foreach my $gene (@genes){
 	foreach my $exon (@exons_transcript){
 	    my $exon_id = $exon->stable_id() or die("exon id is required");
 	    if (defined $exons{$exon_id}){
+		# correct exon_id if the current exon is redundant
+		if ($exons{$exon_id}{'REDUNDANT'} ne NONE){
+		    $exon_id = $exons{$exon_id}{'REDUNDANT'};
+		}
+                # we add the transcript_id as a parent of the exon_id
 		if (defined $exons{$exon_id}{'PARENT'}){
 		    $exons{$exon_id}{'PARENT'} .= ",$transcript_id";
 		}else{
@@ -261,6 +278,13 @@ foreach my $gene (@genes){
 	print $output "$chr\t$source\tmRNA\t$transcript_start\t$transcript_end\t.\t$strand\t.\tID=$transcript_id\;Parent=$gene_id\;exons_nb=$nb_exons_transcript\;type=$desc\n";
     }
     
+    # we must delete redundant exons before writing exons features
+    foreach my $exon_id (keys %exons){
+	if ($exons{$exon_id}{'REDUNDANT'} ne NONE){
+	    delete $exons{$exon_id};
+	}
+    } 
+
     # Finally, write exons features 
     foreach my $exon_id (sort {$exons{$a}{'RANK'} <=> $exons{$b}{'RANK'}}
 			 keys %exons){
