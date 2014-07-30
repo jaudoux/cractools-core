@@ -13,7 +13,7 @@ while(<GTF>) {print $gtf_file $_; $first_line=$_ unless $i>0;$i++;}
 close $gtf_file;
 
 my $gtfAnnotation = CracTools::GFF::Annotation->new($first_line,'gtf');
-print STDERR $gtfAnnotation->chr."\n";
+#print STDERR $gtfAnnotation->chr."\n";
 ok($gtfAnnotation->chr eq 'AB000123','chr()');
 ok($gtfAnnotation->source eq 'Twinscan','source()');
 ok($gtfAnnotation->feature eq 'CDS','feature()');

@@ -799,7 +799,7 @@ sub isClassified {
 sub events {
   my $self = shift;
   my $event_type = shift;
-  $self->loadEvents($event_type);
+  $self->loadEvents();#$event_type);
   if(defined $self->{events}{$event_type}) {
     return $self->{events}{$event_type};
   } else {
@@ -822,9 +822,9 @@ sub loadEvents {
   my $self = shift;
   my $event_type_to_load = shift;
   ## TODO avoid double loading when doing lazy loading
-  if(defined $event_type_to_load && defined $self->{$event_type_to_load}{loaded}) {
-    return 0;
-  }
+  #if(defined $event_type_to_load && defined $self->{$event_type_to_load}{loaded}) {
+  #  return 0;
+  #}
   if(!defined $self->{events} && defined $self->{extended_fields}{XE}) { 
     # Init events
     my @events = split(";",$self->{extended_fields}{XE});
@@ -891,13 +891,13 @@ sub loadEvents {
         }
       }
     }
-    # If we have only load a specific event type
-    if(defined $event_type_to_load) {
-      $self->{$event_type_to_load}{loaded} = 1;
-    # Else we have load every events.
-    } else {
-      $self->{events}{loaded} = 1;
-    }
+    ## If we have only load a specific event type
+    #if(defined $event_type_to_load) {
+    #  $self->{$event_type_to_load}{loaded} = 1;
+    ## Else we have load every events.
+    #} else {
+    #  $self->{events}{loaded} = 1;
+    #}
   }
 }
 
