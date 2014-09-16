@@ -217,6 +217,7 @@ sub iteratorFile {
     if($sam_line) {
       return $sam_line, $line_number;
     } else {
+      close(SAM) or warn $! ? "Error closing samtools pipe: $!" : "Exit status $? from samtools";
       return ();
     }
   };
