@@ -192,7 +192,8 @@ sub iteratorFile {
   } elsif($self->{sam_file} =~ /\.bam$/) {
     open(SAM, "-|", "samtools view -h $sam_file" )or die "Cannot open $sam_file, check if samtools are installed.";
   } else {
-    die "Unknown file format. Must be either a BAM or a SAM(.gz)";
+    open(SAM,"< $sam_file") or die ("Cannot open $sam_file");
+    warn "Unknown file format. We assume this is SAM (uncompressed).";
   }
 
   my $next_line;
