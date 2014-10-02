@@ -195,6 +195,9 @@ sub new {
     # Hack in case there is multiple field with the same tag
     $extended_fields{$key} = defined $extended_fields{$key}? $extended_fields{$key}.";".$value : $value;
   }
+  
+  # We do not want any "chr" string before the reference sequence value
+  $rname =~ s/^chr//;
 
   my $self = bless{ 
     qname => $qname,

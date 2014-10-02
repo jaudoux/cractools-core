@@ -4,7 +4,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 64;
+use Test::More tests => 65;
 use CracTools::SAMReader::SAMline;
 
 my $test_line = "HWI-ST225:407:C0KV8ACXX:1:1101:2576:2209\t161\t17\t41594644\t254\t45M2807N56M\t17\t41597762\t0\tCGGAAATCCAGAGAACCAACTTAGCAAGCACAGTGCTGTCACTCAAGGCCATGGGTATCAATGATCTGCTGTCCTTTGATTTCATGGATGCCCCACCTATG\t".'@B@FDFDFGHDHDBEE=EBFGGIJCHIEGGIIH9CFGHGIJECG>BDGGFD8DHG)=FHGGGCGIIIEGHDCCEEHED7;?@ECCEA;3>ACDDB?BBAAC'."\tXU:i:1\tXD:i:0\tXM:i:0\tXN:i:0\tXO:Z:17|1,41597512\tXQ:i:62\tXC:i:1\tXE:Z:0:0:Junction:normal:44:17|1,41594690:2807\tXR:Z:p_support=1,1233,1244,1250,1251,1232,1223,1234,1165,1166,1145,1052,1031,1131,1158,1156,1133,1115,1138,1169,1154,1152,1073,1072,945,1115,1044,1032,1019,958,924;p_loc=0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1\tXP:Z:chimera:1|-1,26607676:1|1,26606650\tXP:Z:loc:1:1:0\tSA:Z:X,989,+,5S6M,30,1;3,45,-,34M1X2S;\tNH:i:2";
@@ -126,3 +126,7 @@ is($sam_line->seq,'ATGC',"set seq");
 $sam_line->qual('BBBB');
 is($sam_line->qual,'BBBB',"qual");
 
+# Testing "chr" prefix removal function
+$test_line = "chr_line\t0\tchr3\t1\t254\t10M\t*\t*\t0\tCGGAAATCCA\tDFDFGHDHDBE";
+$sam_line = CracTools::SAMReader::SAMline->new($test_line);
+is($sam_line->rname,3,"chr prefix removal");

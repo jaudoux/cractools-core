@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 24;
+use Test::More tests => 25;
 use CracTools::Interval::Query;
 use File::Temp 0.23;
 use Inline::Files 0.68;
@@ -56,6 +56,8 @@ ok($intervalQuery->fetchAllNearestUp(1,2,1)->[0] =~ /line3/,'fetchAllNearestUp (
 ok($intervalQuery->fetchAllNearestDown(2,120,-1)->[0] =~ /line7/,'fetchAllNearestDown (3)');
 ok($intervalQuery->fetchAllNearestUp(2,20,-1)->[0] =~ /line7/,'fetchAllNearestUp (3)');
 
+# Testing "chr" prefix removal function
+ok($intervalQuery->fetchByLocation(3,1,1)->[0] =~ /line8/,'chr prefix removal');
 
 __GFF__
 1	line1	exon	1	10	.	+	0
@@ -66,3 +68,4 @@ __GFF__
 2	line5	exon	5	10	.	+	0
 2	line6	gene	4	8	.	+	0
 2	line7	gene	34	48	.	-	0
+chr3	line8	gene	1	10	.	+	0

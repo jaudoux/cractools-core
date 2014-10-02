@@ -349,6 +349,9 @@ sub _init {
         # Add strand to default if not defined
         $i->{strand} = 1 unless defined $i->{strand};
 
+        # We do not want any "chr" string before the reference sequence value
+        $i->{seqname} =~ s/^chr//;
+
         my $key = _getIntervalTreeKey($i->{seqname},$i->{strand});
         if(!defined $interval_trees{$key}) {
           $interval_trees{$key} = Set::IntervalTree->new;

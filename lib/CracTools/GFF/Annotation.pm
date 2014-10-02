@@ -147,6 +147,9 @@ sub _init {
   # Get the strand if 1/-1 format
   $strand = convertStrand($strand);
 
+  # We do not want any "chr" string before the reference sequence value
+  $chr =~ s/^chr//;
+
   # Loading the 8 first columns
   $self->{chr} = $chr;
   $self->{source} = $source;
