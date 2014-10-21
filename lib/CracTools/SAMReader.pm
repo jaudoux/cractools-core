@@ -320,6 +320,29 @@ sub hasCracOption {
   }
 }
 
+=head2 getCracVersionNumber
+
+  Description : Return CRAC version number
+
+=cut
+
+sub getCracVersionNumber {
+  my $self = shift;
+  if(defined $self->header) {
+    my @header_lines = split('\n',$self->header);
+    my $version_number; 
+    foreach (@header_lines) {
+      if ($_ =~/\@PG.*PN:crac/) {
+        ($version_number) = $_ =~ /VN:([^\t]+)/;    
+        last;
+      }
+    }
+    return $version_number;
+  } else {
+    return undef;
+  }
+}
+
 =head1 PRIVATE METHODS
 
 =head2 init (private)

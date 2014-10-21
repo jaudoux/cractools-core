@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 #
-use Test::More tests => 5;
+use Test::More tests => 6;
 use CracTools::SAMReader;
 use File::Temp;
 
@@ -33,3 +33,4 @@ while(my $align = $it->()) {
 ok($nb_alignements == 6, 'Every lines are readed');
 is($sam_reader->getCracArgumentValue('max-extension-length'),2,'getCracArgumentValue (1)');
 is($sam_reader->getCracArgumentValue('max-splice-length'),1000,'getCracArgumentValue (2)');
+is($sam_reader->getCracVersionNumber(),'1.3.1','getCracVersionNumber');
