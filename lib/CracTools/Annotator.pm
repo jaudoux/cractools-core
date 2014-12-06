@@ -77,7 +77,7 @@
 ###############################################################################
 
 package CracTools::Annotator;
-# ABSTRACT: Generic annotation base on CracTools::GFF::Query
+# ABSTRACT: Generic annotation base on CracTools::GFF::Query::File
 
 use strict;
 use warnings;
@@ -86,7 +86,7 @@ use Carp;
 use Data::Dumper;
 use CracTools::GFF::Annotation;
 #use CracTools::GFF::Query;
-use CracTools::Interval::Query;
+use CracTools::Interval::Query::File;
 use List::Util qw[min max];
 use CracTools::Const;
 
@@ -418,7 +418,7 @@ sub _init {
   my $self = shift;
 
   # Create a GFF file to query exons
-  my $gff_query = CracTools::Interval::Query->new(file => $self->{gff_file}, type => 'gff');
+  my $gff_query = CracTools::Interval::Query::File->new(file => $self->{gff_file}, type => 'gff');
   $self->{gff_query} = $gff_query;
 
 }
@@ -467,7 +467,7 @@ sub _constructCandidate {
 
   Arg [1] : Hash ref - annotations
             Annotions is a hash reference where keys are coordinates
-            given by CracTools::Interval::Query objects.
+            given by CracTools::Interval::Query::File objects.
   Description : _constructCandidate is a recursive method that build a
                 candidate hash.
   ReturnType  : Candidate array ref of all candidates built by _constructCandidate
