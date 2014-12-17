@@ -56,10 +56,6 @@ sub addInterval {
   my $self = shift;
   my ($chr,$start,$end,$strand,$value) = @_;
 
-  if(!defined $strand) {
-    $strand = 1;
-  }
-
   my $interval_tree = $self->_getIntervalTree($chr,$strand);
   # If there is no already existing IntervalTree for this ("chr","strand") pair
   if(!defined $interval_tree) {
@@ -83,7 +79,7 @@ sub addInterval {
             The start of the slice on the sequence region
   Arg [3] : int $end
             The end of the slice on the sequence region
-  Arg [4] : int $strand
+  Arg [4] : (Optional) int $strand
             The orientation of the slice on the sequence region
   Arg [5] : (Optional) Boolean $windowed
             Only return lines whose intervals are completely contained
@@ -177,12 +173,13 @@ sub fetchNearestUp {
 
   $self->_getIntervalTree($chr,$strand);
 
-Return the Set::IntervalTree reference for the chromosome and strand
+Return the Set::IntervalTree reference for the chromosome and strand (Default : 1)
 
 =cut
 
 sub _getIntervalTree {
   my ($self,$chr,$strand) = @_;
+  $strand = 1 if !defined $strand;
   return $self->{interval_trees}{_getIntervalTreeKey($chr,$strand)};
 }
 
@@ -196,6 +193,7 @@ Add an Set::IntervalTree object for a specific ("chr","strand") pair.
 
 sub _addIntervalTree {
   my ($self,$chr,$strand,$interval_tree) = @_;
+  $strand = 1 if !defined $strand;
   $self->{interval_trees}{_getIntervalTreeKey($chr,$strand)} = $interval_tree;
 }
 
@@ -209,6 +207,7 @@ Static method that return and unique key for the ("chr","strand") pair passed in
 
 sub _getIntervalTreeKey {
   my ($chr,$strand) = @_;
+  $strand = 1 if !defined $strand;
   return "$chr"."@"."$strand";
 }
 
