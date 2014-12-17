@@ -107,6 +107,7 @@ package CracTools::SAMReader;
 
 use strict;
 use warnings;
+use Carp;
 use CracTools::SAMReader::SAMline;
 
 =head1 METHODS
@@ -252,14 +253,36 @@ sub refSeqLength {
   my $self = shift;
   my $ref_seq = shift;
   croak("Missing reference sequence name in arguement") unless defined $ref_seq;
+  my $refseq_lengths = $self->allRefSeqLengths();
+  return $refseq_lengths->{$ref_seq};
+}
+
+=head2 allRefSeqLengths
+
+Return a hashref with all reference sequence names and length.
+
+  my $refseq_lengths = $sam_reader->allRefSeqLength();
+
+The return value is :
+
+  { refseq_name => length,
+    refseq_name => lenght,
+    ...
+  }
+
+=cut
+
+sub allRefSeqLengths {
+  my $self = shift;
   my @header_lines = split('\n',$self->header);
-  my $ref_seq_len; 
+  my %refseq_lengths; 
   foreach (@header_lines) {
-    if ($_ =~/\@SQ.*SN:$ref_seq/) {
-      ($ref_seq_len) = $_ =~ /LN:([^\t]+)/;    
+    if ($_ =~/\@SQ.*SN:/) {
+      my ($name,$length) = $_ =~/\@SQ.*SN:(\S+)\s+LN:(\d+)+/;    
+      $refseq_lengths{$name} = $length;
     }
   }
-  return $ref_seq_len;
+  return \%refseq_lengths;
 }
 
 =head2 commandLine
