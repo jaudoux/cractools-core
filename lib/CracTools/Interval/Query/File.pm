@@ -11,7 +11,8 @@ use parent 'CracTools::Interval::Query';
 
 =head2 new
 
-  Arg [1] : String - GFF file
+  Arg [file] : String - file path
+  Arg [type] : String - file type (bed,sam,gff,gtf)
 
   Example     : my $gffQuery = CracTools::GFF::Query->new('annotations.gff');
   Description : Create a new GFF Query object
