@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-use Test::More tests => 8;
+use Test::More tests => 11;
 use CracTools::BitVector;
 
 my $bv = CracTools::BitVector->new(10);
@@ -13,6 +13,9 @@ is($bv->nb_set(),0);
 
 $bv->set(2);
 $bv->set(5);
+
+#0010010100
+
 
 is($bv->nb_set(),2);
 
@@ -30,3 +33,12 @@ is($bv->prev(5),2);
 # succ
 $bv->set(7);
 is($bv->succ(3),7);
+
+#0010000100
+
+# rank
+is($bv->rank(5),1);
+is($bv->rank(7),2);
+
+# select
+is($bv->select(2),7);

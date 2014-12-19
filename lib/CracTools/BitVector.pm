@@ -26,6 +26,7 @@ sub new {
     
     $this->{n} = $length;
     $this->{set} = 0;
+    $this->{first_bit_set} = $length + 1;
 
     my $max = int($length / BITNESS);
     if ($length % BITNESS > 0) {
@@ -38,6 +39,11 @@ sub new {
     }
 
     return $this;
+}
+
+sub firstBitSet {
+  my $self = shift;
+  return $self->{first_bit_set};
 }
 
 sub copy {
@@ -59,6 +65,7 @@ sub copy {
 # @post get($i) == 1
 sub set {
     my ($this, $i) = @_;
+    $this->{first_bit_set} = $i if $i < $this->{first_bit_set};
     if (! $this->get($i)) {
         $this->{set}++;
         $this->{bits}[int($i / BITNESS)] |= (1 << ($i % BITNESS));
@@ -182,6 +189,43 @@ sub succ {
 	}	
         return $i;
     }
+}
+
+# @param i position in the bit vector
+# @return The next position that has a bit set.
+#         ie. a position j >= i such that get(j) == 1
+#         && get(k) == 0 , j > k >= i
+#         If max is set, j <= i + max
+#         -1 if no such position exists
+sub rank {
+  my ($self, $i) = @_;
+  my $rank = $self->get($i)? 1 : 0;
+  my $found_bit = 1;
+  while($found_bit) {
+    $i = $self->prev($i-1);
+    if ($i != -1) {
+      $rank++;
+    } else {
+      $found_bit = 0;
+    }
+  }
+  return $rank;
+}
+
+# @param i position in the bit vector
+# @return The next position that has a bit set.
+#         ie. a position j >= i such that get(j) == 1
+#         && get(k) == 0 , j > k >= i
+#         If max is set, j <= i + max
+#         -1 if no such position exists
+sub select {
+  my ($self, $nb) = @_;
+  my $i = $self->firstBitSet;
+  while ($nb > 1 && $i != -1) {
+    $i = $self->succ($i+1);
+    $nb--;
+  }
+  return $i;
 }
 
 sub length {

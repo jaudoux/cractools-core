@@ -188,6 +188,47 @@ sub getNbBitsSetInRegion {
   return $nb_bits;
 }
 
+=head2 rank
+
+Return the number of bit set in the genome before this position
+
+=cut
+
+sub rank {
+  my ($self,$chr,$pos) = @_;
+  my $cumulated_bits = 0;
+  my $i = 0;
+  my @chr_sorted = sort keys %{$self->{bit_vectors}};
+  while($chr_sorted[$i] ne $chr) {
+    $cumulated_bits += $self->getBitvector($chr_sorted[$i])->nb_set;
+    $i++;
+  }
+  return $cumulated_bits + $self->getBitvector($chr_sorted[$i])->rank($pos);
+}
+
+=head2 select 
+
+Return an array with a (chr,pos) of the Nth bit set
+
+=cut
+
+sub select {
+  my $self = shift;
+  my $i = shift;
+  my $cumulated_bits = 0;
+  my @chr_sorted = sort keys %{$self->{bit_vectors}};
+  my $j = 0;
+  while($j < @chr_sorted && $cumulated_bits + $self->getBitvector($chr_sorted[$j])->nb_set < $i) {
+    my $chr = $chr_sorted[$j];
+    my $bv = $self->getBitvector($chr);
+    $cumulated_bits += $self->getBitvector($chr)->nb_set;
+    $j++;
+  }
+  my $chr = $chr_sorted[$j-1];
+  my $pos = $self->getBitvector($chr_sorted[$j-1])->select($i - $cumulated_bits + 1);
+  return ($chr,$pos);
+}
+
 
 
 
