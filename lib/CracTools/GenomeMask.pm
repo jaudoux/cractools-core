@@ -168,6 +168,26 @@ sub getPos {
   return $bv->get($pos) if defined $bv;
 }
 
+=head2 getPosSetInRegion
+
+  my $nb_pos_set = $genome_mask->getNbBitsSetInRegion($chr,$start,$end)
+
+Return the positions of bits set in this genomic region
+
+=cut
+
+sub getPosSetInRegion {
+  my ($self,$chr,$start,$end) = @_;
+  my $bv = $self->getBitvector($chr);
+  my @pos;
+  if(defined $bv) {
+    for(my $i = $start; $i <= $end; $i++) {
+      push(@pos,$i) if $bv->get($i) == 1;  
+    }
+  }
+  return \@pos;
+}
+
 =head2 getNbBitsSetInRegion
 
   my $nb_pos_set = $genome_mask->getNbBitsSetInRegion($chr,$start,$end)
@@ -177,15 +197,8 @@ Return the number of bit set in this genomic region
 =cut
 
 sub getNbBitsSetInRegion {
-  my ($self,$chr,$start,$end) = @_;
-  my $bv = $self->getBitvector($chr);
-  my $nb_bits = 0;
-  if(defined $bv) {
-    for(my $i = $start; $i <= $end; $i++) {
-      $nb_bits += $bv->get($i);  
-    }
-  }
-  return $nb_bits;
+  my $self = shift;
+  return scalar @{$self->getPosSetInRegion(@_)};
 }
 
 =head2 rank

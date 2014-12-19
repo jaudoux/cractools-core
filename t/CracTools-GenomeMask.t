@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 11;
+use Test::More tests => 13;
 use CracTools::GenomeMask;
 
 my $g_mask = CracTools::GenomeMask->new(genome => {chr1 => 10, chr2 => 20});
@@ -19,6 +19,10 @@ is($g_mask->getNbBitsSetInRegion("chr1",3,6), 3);
 
 $g_mask->setPos("chr2",4);
 $g_mask->setPos("chr2",8);
+
+my @pos_set = @{$g_mask->getPosSetInRegion("chr2",2,10)};
+is($pos_set[0],4);
+is($pos_set[1],8);
 
 is($g_mask->rank("chr2",5),5);
 my ($chr,$pos) = $g_mask->select(7);
