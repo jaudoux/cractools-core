@@ -34,6 +34,7 @@ my ($help,
   $splices_file,
   $mutations_file,
   $chimeras_file,
+  $coverless_splices,
 );
 
 GetOptions(
@@ -41,6 +42,7 @@ GetOptions(
   "s|splices=s"       => \$splices_file,
   "m|mutations=s"     => \$mutations_file,
   "c|chimeras=s"      => \$chimeras_file,
+  "coverless-splices" => \$coverless_splices,
   "man"               => \$man,
   "help"              => \$help,
 ) or pod2usage(-verbose => 1);
@@ -96,6 +98,7 @@ foreach my $region (@regions) {
       $line,
       $is_stranded,
       $min_gap_length,
+      $coverless_splices,
       $region_chr,
       $region_start,
       $region_end,
@@ -122,7 +125,7 @@ foreach my $region (@regions) {
 }
 
 sub extractSplicesFromSAMline {
-  my ($splices,$line,$is_stranded,$min_gap_length,$region_chr,$region_start,$region_end) = @_;
+  my ($splices,$line,$is_stranded,$min_gap_length,$coverless_splices,$region_chr,$region_start,$region_end) = @_;
   # Next for secondary alignements
   if (!$line->isFlagged(256) && !$line->isFlagged(2048)) {
     # Loop over splices
@@ -134,8 +137,10 @@ sub extractSplicesFromSAMline {
         || $splice->{loc}->{pos} < $region_start 
         || $splice->{loc}->{chr} ne $region_chr 
         || $splice->{gap} < $min_gap_length
-        || $splice->{type} ne 'normal'
       );
+
+      next if $splice->{type} eq 'coverless' && !$coverless_splices;
+
       my @nb = $line->cigar =~ /[D|N|M|X|=](\d+)/g;
       my $mapping_length = 0;
       map {$mapping_length += $_} @nb;
