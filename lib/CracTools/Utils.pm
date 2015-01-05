@@ -625,6 +625,7 @@ sub getFileIterator {
       $parsing_method = \&parseGFFLine;
       push (@parsing_arguments,$type);
     } elsif($type =~ /bed/i) {
+      $header_regex = '^track\s';
       $parsing_method = \&parseBedLine;
     } elsif ($type =~ /vcf/i) {
       $header_regex = '^#';
