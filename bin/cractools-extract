@@ -368,7 +368,7 @@ sub extractChimerasFromSAMline {
   # Next for secondary alignements
   if (!$line->isFlagged(256) && !$line->isFlagged(2048)) {
     # Loop over splices
-    foreach my $chimera (@{$line->events('chimeras')}) {
+    foreach my $chimera (@{$line->events('chimera')}) {
       my ($chr1,$pos1,$strand1) = @{$chimera->{loc1}}{'chr','pos','strand'};
       my ($chr2,$pos2,$strand2) = @{$chimera->{loc2}}{'chr','pos','strand'};
 
