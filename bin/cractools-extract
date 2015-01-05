@@ -381,10 +381,10 @@ sub extractChimerasFromSAMline {
         $key = $reverse_key;
       }
 
-      if(defined $chimera->{$key}) {
-        push(@{$chimera->{$key}},$line->qname);
+      if(defined $chimeras->{$key}) {
+        push(@{$chimeras->{$key}},$line->qname);
       } else {
-        $chimera->{$key} = [$line->qname];
+        $chimeras->{$key} = [$line->qname];
       }
     }
   }
