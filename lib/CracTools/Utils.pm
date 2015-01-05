@@ -454,6 +454,25 @@ sub vcfFileIterator {
 
 =head2 chimCTFileIterator
 
+Return a hashref with the chimera parsed:
+  
+  {
+    sample            => $sample,                                                    
+    chim_key          => $chim_key,                                                
+    chr1              => $chr1,                                                        
+    pos1              => $pos1,                                                        
+    strand1           => $strand1,                                                  
+    chr2              => $chr2,                                                        
+    pos2              => $pos2,                                                        
+    strand2           => $strand2,                                                  
+    chim_value        => $chim_value,                                            
+    spanning_junction => $spanning_junction,                              
+    spanning_PE       => $spanning_PE,                                          
+    class             => $class,                                                      
+    comments          => { coment_id => 'comment_value', ... },
+    extend_fields     => { extend_field_id => 'extend_field_value', ... },
+  }
+
 =cut
 
 sub chimCTFileIterator {
