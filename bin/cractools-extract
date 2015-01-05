@@ -121,8 +121,8 @@ foreach my $region (@regions) {
   }
   printSplices(\%splices,$splices_fh) if defined $splices_fh;
   printMutations(\%mutations,$mutations_fh) if defined $mutations_fh;
-  printChimeras(\%chimeras,$chimeras_fh) if defined $chimeras_fh;
 }
+printChimeras(\%chimeras,$chimeras_fh) if defined $chimeras_fh;
 
 sub extractSplicesFromSAMline {
   my ($splices,$line,$is_stranded,$min_gap_length,$coverless_splices,$region_chr,$region_start,$region_end) = @_;
