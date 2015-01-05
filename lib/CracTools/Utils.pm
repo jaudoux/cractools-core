@@ -452,6 +452,14 @@ sub vcfFileIterator {
   return getFileIterator(file => $file, type => 'vcf');
 }
 
+=head2 chimCTFileIterator
+
+=cut
+
+sub chimCTFileIterator {
+  return getFileIterator(file => shift, type => 'chimCT');
+}
+
 =head2 bamFileIterator
 
 BE AWARE this method is only availble if C<samtools> binary is availble.
@@ -600,6 +608,45 @@ sub parseVCFLine {
   };
 }
 
+=head2 parseChimCTLine
+
+=cut
+
+sub parseChimCTLine {                                                     
+  my $line = shift;                                                       
+  my($id,$name,$chr1,$pos1,$strand1,$chr2,$pos2,$strand2,$chim_value,$spanning_junction,$spanning_PE,$class,$comments,@others) = split("\t",$line);
+  my($sample,$chim_key) = split(":",$id);                                 
+  my @comments = split(",",$comments);                                    
+  my %comments;                                                           
+  foreach my $com (@comments){                                            
+      my ($key,$val) = split("=",$com);                                   
+      $comments{$key} = $val;                                             
+  }                                                                       
+  my %extend_fields;                                                      
+  foreach my $field (@others) {                                           
+    my ($key,$val) = split("=",$field);                                   
+    if(defined $key && defined $val) {                                    
+      $extend_fields{$key} = $val;                                        
+    }                                                                     
+  }                                                                       
+  return {                                                                
+    sample            => $sample,                                                    
+    chim_key          => $chim_key,                                                
+    chr1              => $chr1,                                                        
+    pos1              => $pos1,                                                        
+    strand1           => $strand1,                                                  
+    chr2              => $chr2,                                                        
+    pos2              => $pos2,                                                        
+    strand2           => $strand2,                                                  
+    chim_value        => $chim_value,                                            
+    spanning_junction => $spanning_junction,                              
+    spanning_PE       => $spanning_PE,                                          
+    class             => $class,                                                      
+    comments          => \%comments,                                               
+    extend_fields     => \%extend_fields,                                     
+  };                                                                      
+} 
+
 
 =head1 FILES IO
 
@@ -630,6 +677,9 @@ sub getFileIterator {
     } elsif ($type =~ /vcf/i) {
       $header_regex = '^#';
       $parsing_method = \&parseVCFLine;
+    } elsif ($type =~ /chimCT/i) {
+      $header_regex = '^#';
+      $parsing_method = \&parseChimCTLine;
     } else {
       croak "Undefined format type";
     }
