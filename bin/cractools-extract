@@ -82,7 +82,7 @@ print $mutations_fh "##fileformat=VCFv4.1\n",
   "###INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">\n",
   "###INFO=<ID=CS,Number=A,Type=Float,Description=\"CRAC confidence score\">\n",
   "##CHROM POS     ID        REF    ALT     QUAL FILTER INFO\n" if defined $mutations_fh;
-print $chimeras_fh "#",join("\t",qw( chr1 pos1 strand1 chr2 pos2 strand2 name score)),"\n" if defined $chimeras_fh;
+print $chimeras_fh "#",join("\t",qw( chr1 pos1 strand1 chr2 pos2 strand2 score reads cover)),"\n" if defined $chimeras_fh;
 
 my %chimeras;
 # Loop over regions
@@ -382,9 +382,11 @@ sub extractChimerasFromSAMline {
       }
 
       if(defined $chimeras->{$key}) {
-        push(@{$chimeras->{$key}},$line->qname);
+        push(@{$chimeras->{$key}->{reads}},$line->qname);
+        $chimeras->{$key}->{score} += $chimera->{score} if defined $chimera->{score};
       } else {
-        $chimeras->{$key} = [$line->qname];
+        $chimeras->{$key}->{reads} = [$line->qname];
+        $chimeras->{$key}->{score} = $chimera->{score} if defined $chimera->{score};
       }
     }
   }
@@ -404,8 +406,9 @@ sub printChimeras {
                      $chr2,
                      $pos2,
                      CracTools::Utils::convertStrand($strand2),
-                     join(":",@{$chimeras->{$chim_key}}),
-                     scalar @{$chimeras->{$chim_key}}
+                     defined $chimeras->{$chim_key}->{score}? $chimeras->{$chim_key}->{score}/@{$chimeras->{$chim_key}->{reads}} : 'N/A',
+                     join(":",@{$chimeras->{$chim_key}->{reads}}),
+                     scalar @{$chimeras->{$chim_key}->{reads}}
                      , "\n";
   }
 }
