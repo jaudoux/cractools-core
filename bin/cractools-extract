@@ -193,7 +193,7 @@ sub extractSplicesFromSAMline {
 sub printSplices {
   my $splices = shift;
   my $output_fh = shift;
-  foreach my $splice (sort {$a->{chr} <=> $b->{chr} || $a->{pos} <=> $b->{pos}} values  %{$splices}) {
+  foreach my $splice (sort {$a->{chr} cmp $b->{chr} || $a->{pos} <=> $b->{pos}} values  %{$splices}) {
 
     print $output_fh join "\t", $splice->{chr},
                      $splice->{min},
