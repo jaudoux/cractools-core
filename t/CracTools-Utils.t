@@ -5,6 +5,7 @@ use Test::More tests => 77;
 use CracTools::Utils;
 use Inline::Files 0.68;
 use File::Temp;
+use Data::Dumper;
 
 is(CracTools::Utils::reverseComplement("ATGCAG"), "CTGCAT", 'reverseComplement()');
 is(CracTools::Utils::reverse_tab("1,2,0,1"), "1,0,2,1", 'reverse_tab()');
@@ -168,6 +169,13 @@ is(CracTools::Utils::convertStrand('-'),-1);
   is($mutation->{info}->{NS},3);
   is($mutation->{info}->{DP},14);
   is($mutation->{info}->{AF},0.5);
+}
+
+# parseSAMLineLite
+{
+  my $sam_line = "HWI-ST225:407:C0KV8ACXX:1:1101:2576:2209\t161\t17\t41594644\t254\t45M2807N56M\t17\t41597762\t0\tCGGAAATCCAGAGAACCAACTTAGCAAGCACAGTGCTGTCACTCAAGGCCATGGGTATCAATGATCTGCTGTCCTTTGATTTCATGGATGCCCCACCTATG\t".'@B@FDFDFGHDHDBEE=EBFGGIJCHIEGGIIH9CFGHGIJECG>BDGGFD8DHG)=FHGGGCGIIIEGHDCCEEHED7;?@ECCEA;3>ACDDB?BBAAC'."\tNH:i:2";
+  my $parsed_line =CracTools::Utils::parseSAMLineLite($sam_line);
+  print STDERR Dumper($parsed_line);
 }
 
 

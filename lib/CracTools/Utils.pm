@@ -662,9 +662,34 @@ sub parseChimCTLine {
     spanning_PE       => $spanning_PE,                                          
     class             => $class,                                                      
     comments          => \%comments,                                               
-    extend_fields     => \%extend_fields,                                     
+    extended_fields     => \%extend_fields,                                     
   };                                                                      
 } 
+
+=head2 parseSAMLineLite
+
+=cut
+
+sub parseSAMLineLite {
+  my $line = shift;
+  my ($qname,$flag,$rname,$pos,$mapq,$cigar,$rnext,$pnext,$tlen,$seq,$qual,@others) = split("\t",$line);
+  #my %cigar_hash = map { substr($_,-1) => substr($_,0,length($_)-2) }  $cigar =~ /(\d+)(\D)/;
+  my @cigar_hash = map { { op => substr($_,-1), nb => substr($_,0,length($_)-1)} } $cigar =~ /(\d+\D)/g;
+  return {
+    qname => $qname,
+    flag => $flag,
+    rname => $rname,
+    pos => $pos,
+    mapq => $mapq,
+    cigar => \@cigar_hash,
+    rnext => $rnext,
+    pnext => $pnext,
+    tlen => $tlen,
+    seq => $seq,
+    qual => $qual,
+    extended_fields => \@others,
+  };
+}
 
 
 =head1 FILES IO
@@ -699,6 +724,9 @@ sub getFileIterator {
     } elsif ($type =~ /chimCT/i) {
       $header_regex = '^#';
       $parsing_method = \&parseChimCTLine;
+    } elsif ($type =~ /SAM/i || $type =~ /BAM/i) {
+      $header_regex = '^@';
+      $parsing_method = \&parseSAMLineLite;
     } else {
       croak "Undefined format type";
     }
