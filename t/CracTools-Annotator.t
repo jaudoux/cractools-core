@@ -2,22 +2,22 @@
 #
 use strict;
 use warnings;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use CracTools::Annotator;
 use File::Temp 0.23;
 use Inline::Files 0.68;  
-
 
 # Create a temp file with the GFF lines described below
 my $gff_file = new File::Temp( SUFFIX => '.gff', UNLINK => 1);
 while(<GFF>) {print $gff_file $_;}
 close $gff_file;
 
-my $annotator = CracTools::Annotator->new($gff_file);
+#my $annotator = CracTools::Annotator->new($gff_file);
+my $annotator = CracTools::Annotator->new($gff_file,"fast");
 
 # candidat(chr,pos_start,post_end,strand)
 my @candidates = @{ $annotator->getAnnotationCandidates(1,30,78,1)}; # Convert to 0-based coordinate system
-is(scalar @candidates, 3, 'getAnnotationCandidates');
+is(scalar @candidates, 4, 'getAnnotationCandidates');
 my ($annot,$priority,$type) = $annotator->getBestAnnotationCandidate(1,44,60,1);
 is($type,'INTRON','getBestAnnotationCandidate (2)');
 is($annot->{gene}->attribute('Name'),'TOTO','getBestAnnotationCandidate (1)');
@@ -25,15 +25,15 @@ ok($annotator->foundSameGene(1,12,42,72,102,1),'foundSameGene (1)');
 is($annotator->foundSameGene(1,12,102,112,127,-1),0,'foundSameGene (2)');
 my @candidates_down = @{ $annotator->getAnnotationNearestDownCandidates(1,200,1)};
 foreach my $candidate (@candidates_down){
-    if (defined $candidate->{exon}){
-	is($candidate->{exon}->end,101,'getAnnotationNearestDownCandidates (1)');
-    }
+  if (defined $candidate->{exon}){
+    is($candidate->{exon}->end,101,'getAnnotationNearestDownCandidates (1)');
+  }
 } 
 my @candidates_up = @{ $annotator->getAnnotationNearestUpCandidates(1,10,-1)}; 
 foreach my $candidate (@candidates_up){
-    if (defined $candidate->{exon}){
-	is($candidate->{exon}->start,11,'getAnnotationNearestDownCandidates (1)');
-    }
+  if (defined $candidate->{exon}){
+    is($candidate->{exon}->start,11,'getAnnotationNearestDownCandidates (1)');
+  }
 } 
 
 # bug 17618 (submitted by T. Guignard) 

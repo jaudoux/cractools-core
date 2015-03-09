@@ -96,6 +96,10 @@ Usage:
 
 CracTools::GFF::Annotataion is an object to parse and access GFF line's fields.
 
+=head1 TODO
+
+Set Parent for feature in GTF format (gene_id for transcript and transcript_id for exons).
+
 =cut
 
 package CracTools::GFF::Annotation;

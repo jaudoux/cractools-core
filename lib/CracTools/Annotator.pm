@@ -83,9 +83,9 @@ use strict;
 use warnings;
 
 use Carp;
-use Data::Dumper;
 use CracTools::GFF::Annotation;
 #use CracTools::GFF::Query;
+use CracTools::Interval::Query;
 use CracTools::Interval::Query::File;
 use List::Util qw[min max];
 use CracTools::Const;
@@ -96,6 +96,8 @@ use CracTools::Const;
 
   Arg [1] : String - $gff_file
             GFF file to perform annotation
+  Arg [2] : String - $mode
+            "fast", "light"
 
   Example     : my $annotation = CracTools::GFF::Annotation->new($gff_line);
   Description : Create a new CracTools::GFF::Annotation object
@@ -109,6 +111,9 @@ use CracTools::Const;
 sub new {
   my $class = shift;
   my $gff_file = shift;
+  my $mode = shift;
+
+  $mode = 'light' if !defined $mode;
 
   if(!defined $gff_file) {
     croak "Missing GFF file argument in CracTools::Annotator constructor";
@@ -116,11 +121,21 @@ sub new {
 
   my $self = bless {
     gff_file => $gff_file,
+    mode => $mode,
   }, $class;
 
   $self->_init();
 
   return $self;
+}
+
+=head2 mode 
+
+=cut 
+
+sub mode {
+  my $self = shift;
+  return $self->{mode};
 }
 
 =head2 foundGene
@@ -250,11 +265,12 @@ sub getBestAnnotationCandidate {
 sub getAnnotationCandidates {
   my $self = shift;
   my ($chr,$pos_start,$pos_end,$strand) = @_;
+  # TODO if no strand is provided we should return annotations from both strands
 
   # get GFF annotations that overlap the region to annotate
   my $annotations = $self->{gff_query}->fetchByRegion($chr,$pos_start,$pos_end,$strand);
   # get a ref of an array of hash of candidates
-  my $candidatates = _constructCandidatesFromAnnotation($annotations);
+  my $candidatates = $self->_constructCandidatesFromAnnotation($annotations);
   return $candidatates;
 }
 
@@ -277,11 +293,13 @@ sub getAnnotationNearestDownCandidates {
   # get GFF annotations that overlap the pos_start to annotate
   my $annotations_overlap = $self->{gff_query}->fetchByLocation($chr,$pos_start,$strand);
   # get GFF annotations of nearest down intervals that not overlaped [pos_start,pos_end] pos 
-  my $annotations_down = $self->{gff_query}->fetchAllNearestDown($chr,$pos_start,$strand);
+  my @annotations_down;
+
+  push @annotations_down, @{$self->{gff_query}->fetchAllNearestDown($chr,$pos_start,$strand)};
 
   # get a ref of an array of hash of candidates
-  my @annotations = (@$annotations_overlap,@$annotations_down);
-  my $candidatates = _constructCandidatesFromAnnotation(\@annotations);
+  my @annotations = (@$annotations_overlap,@annotations_down);
+  my $candidatates = $self->_constructCandidatesFromAnnotation(\@annotations);
   return $candidatates;
 }
 
@@ -304,11 +322,13 @@ sub getAnnotationNearestUpCandidates {
   # get GFF annotations that overlap the pos_end to annotate
   my $annotations_overlap = $self->{gff_query}->fetchByLocation($chr,$pos_end,$strand);
   # get GFF annotations of nearest up intervals that not overlaped [pos_start,pos_end] pos 
-  my $annotations_up = $self->{gff_query}->fetchAllNearestUp($chr,$pos_end,$strand);
+  my @annotations_up;
+
+  push @annotations_up, @{$self->{gff_query}->fetchAllNearestUp($chr,$pos_end,$strand)};
 
   # get a ref of an array of hash of candidates
-  my @annotations = (@$annotations_overlap,@$annotations_up);
-  my $candidatates = _constructCandidatesFromAnnotation(\@annotations);
+  my @annotations = (@$annotations_overlap,@annotations_up);
+  my $candidatates = $self->_constructCandidatesFromAnnotation(\@annotations);
   return $candidatates;
 }
 
@@ -416,14 +436,31 @@ sub compareTwoCandidatesDefault{
 
 sub _init {
   my $self = shift;
+  my $gff_query;
 
   # Create a GFF file to query exons
-  my $gff_query = CracTools::Interval::Query::File->new(file => $self->{gff_file}, type => 'gff');
-  $self->{gff_query} = $gff_query;
+  if($self->mode eq "fast") {
+    $gff_query = CracTools::Interval::Query->new();
+    my $gff_it = CracTools::Utils::getFileIterator(file => $self->{gff_file},
+      parsing_method => sub { CracTools::GFF::Annotation->new(@_) },
+      header_regex => "^#",
+    );
+    while(my $gff_annot = $gff_it->()) {
+      $gff_query->addInterval($gff_annot->chr,
+        $gff_annot->start+1,
+        $gff_annot->end+1,
+        $gff_annot->strand,
+        $gff_annot,
+      );
+    }
+  } else {
+    $gff_query = CracTools::Interval::Query::File->new(file => $self->{gff_file}, type => 'gff');
+  }
 
+  $self->{gff_query} = $gff_query;
 }
 
-=head2 _constructCandidate
+=head2 _constructCandidates
 
   Arg [1] : String - annot_id
   Arg [2] : Hash ref - candidate
@@ -434,32 +471,49 @@ sub _init {
             and values are CracTools::GFF::Annotation objects.
 
   Description : _constructCandidate is a recursive method that build a
-                candidate hash.
+                candidate hash. A candidate is defined as a path into the annotation
+                (multi-rooted) tree from a leaf (ex: an exon) to a root (ex: a gene).
   ReturnType  : Candidate Hash ref where keys are GFF features and
                 values are CracTools::GFF::Annotation objects :
-                { feature => CracTools::GFF::Annotation, ...}
+                { feature => CracTools::GFF::Annotation, ..., parent_feature => {featureA => featureB} }
 
 =cut
 
-sub _constructCandidate {
+sub _constructCandidates {
   my ($annot_id,$candidate,$annot_hash) = @_;
+  my @candidates;
   if (!defined $annot_hash->{$annot_id}){
       carp("Missing feature for $annot_id in the gff file");
   }
   $candidate->{$annot_hash->{$annot_id}->feature} = $annot_hash->{$annot_id};
-  # foreach my $annot (values %{$annot_hash}) {
-    # my @parents = $annot->parents;
-    my @parents = $annot_hash->{$annot_id}->parents;
+  my @parents = $annot_hash->{$annot_id}->parents;
+  if(@parents) {
     foreach my $parent (@parents) {
+      
       #Test to avoid a deep recursion
       if($parent eq $annot_id) {
-	carp("Parent could not be the candidat itself, please check your gff file for $annot_id");
-	next;
-      }else{
-	_constructCandidate($parent,$candidate,$annot_hash);
+  carp("Parent could not be the candidat itself, please check your gff file for $annot_id");
+  next;
+      # If there is already a parent with this feature type we duplicated
+      # the candidate since we are branching in the annotation tree
+      }elsif(defined $candidate->{$annot_hash->{$parent}->feature}) {
+        my %copy_candidate = %{$candidate}; 
+        # We register in parent_feature links
+        $copy_candidate{parent_feature}->{$annot_hash->{$annot_id}->feature} = $annot_hash->{$parent}->feature;
+        my $copy_ref = \%copy_candidate;
+        push(@candidates,@{_constructCandidates($parent,$copy_ref,$annot_hash)});
+      # If not we only go up to the parent node in order to continue candidate
+      # construction
+      } else {
+        # We register in parent_feature links
+        $candidate->{parent_feature}->{$annot_hash->{$annot_id}->feature} = $annot_hash->{$parent}->feature;
+        push(@candidates,@{_constructCandidates($parent,$candidate,$annot_hash)});
       }
     }
-  return $candidate;
+    return \@candidates;
+  } else {
+    return [$candidate];
+  }
 }
 
 
@@ -474,14 +528,19 @@ sub _constructCandidate {
 
 =cut
 sub _constructCandidatesFromAnnotation {
+  my $self = shift;
   my $annotations = shift;
   my %annot_hash = ();
   my @candidates = ();
 
   # Construct annotation hash with annot ID as key
   foreach my $annot_line (@{$annotations}) {
-    my $annot = CracTools::GFF::Annotation->new($annot_line,'gff3');
-    $annot_hash{$annot->attribute('ID')} = $annot;
+    if($self->mode eq "fast") {
+      $annot_hash{$annot_line->attribute('ID')} = $annot_line;
+    } else {
+      my $annot = CracTools::GFF::Annotation->new($annot_line,'gff3');
+      $annot_hash{$annot->attribute('ID')} = $annot;
+    }
   }
 
   # Find leaves in annotation tree
@@ -495,7 +554,8 @@ sub _constructCandidatesFromAnnotation {
   foreach my $annot_id (keys %annot_hash) {
       # check if annot_id is a leaf
       if (!defined $hash_leaves{$annot_id}){
-	  push @candidates, _constructCandidate($annot_id,my $new_candidate,\%annot_hash);
+        # Get all possible path from this leaf to the root
+	  push @candidates, @{_constructCandidates($annot_id,my $new_candidate,\%annot_hash)};
       }
   }
 
