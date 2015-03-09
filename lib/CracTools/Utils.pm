@@ -502,6 +502,7 @@ SEE ALSO CracTools::SAMReader::SAMline if you need to parse SAMlines easily
 
 sub bamFileIterator {
   my ($file,$region) = @_;
+  $region = "" if !defined $region;
 
   my $fh;
   if($file =~ /\.bam$/) {
