@@ -475,12 +475,21 @@ sub _init {
                 (multi-rooted) tree from a leaf (ex: an exon) to a root (ex: a gene).
   ReturnType  : Candidate Hash ref where keys are GFF features and
                 values are CracTools::GFF::Annotation objects :
-                { feature => CracTools::GFF::Annotation, ..., parent_feature => {featureA => featureB} }
+                { "exon" => CracTools::GFF::Annotation, 
+                  "gene" => CracTools::GFF::Annotation,
+                  feature => CracTools::GFF::Annotation, ..., 
+                  parent_feature => {featureA => featureB},
+                  leaf_feature => "exon",
+                }
 
 =cut
 
 sub _constructCandidates {
   my ($annot_id,$candidate,$annot_hash) = @_;
+
+  # We init the "leaf_feature" value if this is the first recursion step
+  $candidate->{leaf_feature} = $annot_hash->{$annot_id}->feature if !defined $candidate->{leaf_feature};
+
   my @candidates;
   if (!defined $annot_hash->{$annot_id}){
       carp("Missing feature for $annot_id in the gff file");
