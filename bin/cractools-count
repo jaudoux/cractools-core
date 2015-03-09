@@ -1,0 +1,213 @@
+#! /usr/bin/perl
+# ABSTRACT: Count reads based on a GFF/GTF annotation file
+# PODNAME: cractools count
+
+use strict;
+use warnings;
+
+use Getopt::Long qw(:config auto_version ); # Get options
+use Carp;
+use Pod::Usage;
+use CracTools;
+use CracTools::Utils;
+#use CracTools::Interval::Query::File;
+use CracTools::Annotator;
+use CracTools::Output;
+use Data::Dumper;
+
+=head1 SYNOPSIS
+
+  cractools count [options] file.gff file.bam [file2.bam file3.bam]
+
+=head1 OPTIONS
+
+  --help                 Print this help
+  --man                  Open man page
+  -f                     Feature type to count
+  -v|--verbose           Verbose mode
+  -p=INT                 Number of process to run (default:1)
+
+=cut  
+
+my @ARGV_copy = @ARGV;
+
+my ($help,
+  $man,
+  $verbose,
+);
+
+my $nb_process = 1;
+my $feature_type = "exon";
+my $is_stranded = 0;
+
+GetOptions(
+  "v|verbose"         => \$verbose,
+  "p=i"               => \$nb_process,
+  "man"               => \$man,
+  "help"              => \$help,
+  "f=s"               => \$feature_type,
+  "stranded"          => \$is_stranded,
+) or pod2usage(-verbose => 1);
+
+# TODO implement is_stranded 
+
+pod2usage(-verbose => 1)  if ($help);
+pod2usage(-verbose => 2)  if ($man);
+
+my $annot_file = shift @ARGV;
+pod2usage(-verbose => 1)  unless defined $annot_file;
+
+my $bam_file = shift @ARGV;
+pod2usage(-verbose => 1)  unless defined $bam_file;
+
+my $annotator = CracTools::Annotator->new($annot_file,"fast");
+#my $annotator = CracTools::Annotator->new($annot_file);
+
+my $bam_it = CracTools::Utils::bamFileIterator($bam_file,"");
+
+my %counts;
+
+while(my $line = $bam_it->()) {
+  #  qname => $qname,
+  #  flag => $flag,
+  #  rname => $rname,
+  #  pos => $pos,
+  #  mapq => $mapq,
+  #  cigar => \@cigar_hash,
+  #  rnext => $rnext,
+  #  pnext => $pnext,
+  #  tlen => $tlen,
+  #  seq => $seq,
+  #  qual => $qual,
+  #  extended_fields => \@others,
+  my $sam_line = CracTools::Utils::parseSAMLineLite($line);
+
+  # Find read chunks and register for each on of them a list of candidates
+  my $low = $sam_line->{pos};
+  my $high = $low;
+  my @candidates;
+  foreach my $cigar_chunk (@{$sam_line->{cigar}}) {
+    if($cigar_chunk->{op} =~ 'N') {
+      push(@candidates,getReadChunkCandidates($sam_line->{rname},$low,$high));
+      $low = $high + $cigar_chunk->{nb};
+      $high = $low;
+    } elsif($cigar_chunk->{op} !~ /[SHI]./) {
+      $high = $high + $cigar_chunk->{nb};
+    }
+  }
+  # Conting the last chunk
+  push(@candidates,getReadChunkCandidates($sam_line->{rname},$low,$high));
+  
+  my $min_dist;
+  my $min_dist_bounds;
+  # First we init the hash of selected candidates for the first chunk
+  my %selected_candidates;
+  foreach my $first_chunk_cand (@{$candidates[0]}) {
+    $selected_candidates{$first_chunk_cand->{$feature_type}->attribute('ID')} = $first_chunk_cand->{$feature_type};
+  }
+  # We loop over all chunk candidates to find the best annotation feater
+  # TODO we could do something more elegant when counting "transcripts features"
+  # by selecting those that have the same exons.
+  for(my $i = 1; $i < @candidates -1; $i++) {
+    my %current_selection;
+    my $current_min_dist;# = $min_dist;
+    my $current_min_dist_bounds;
+    # We do the intersection with the previous chunk
+    foreach my $prev_cand (@{$candidates[$i-1]}) {
+      my $prev_cand_parent_feature = $feature_type;
+      foreach my $curr_cand (@{$candidates[$i]}) {
+        my $curr_cand_parent_feature = $feature_type;
+        my $dist = 0;
+        my $dist_bounds = $prev_cand->{dist_end} + $curr_cand->{dist_start};
+        # We declare a hash that stores "already seen features" in order
+        # to avoid infinite loop.
+        my %avoid_recurs;
+        while(defined $prev_cand_parent_feature && defined $curr_cand_parent_feature && $prev_cand->{$prev_cand_parent_feature}->attribute('ID') ne $curr_cand->{$curr_cand_parent_feature}->attribute('ID')) {
+          $dist++;
+          my $prev_cand_parent_feature = $prev_cand->{parent_feature}->{$prev_cand_parent_feature};
+          my $curr_cand_parent_feature = $curr_cand->{parent_feature}->{$curr_cand_parent_feature};
+          if(defined $avoid_recurs{$prev_cand_parent_feature} || 
+            defined $avoid_recurs{$curr_cand_parent_feature}) {
+            carp "GFF deep recursion\n";
+            last;
+          }
+          $avoid_recurs{$prev_cand_parent_feature} = 1;
+          $avoid_recurs{$curr_cand_parent_feature} = 1;
+        }
+        if(!defined $current_min_dist || $dist < $current_min_dist) {
+          $current_min_dist = $dist;
+          $current_min_dist_bounds = $dist_bounds;
+          %current_selection = ();
+        }
+        if($dist == $current_min_dist) {
+          #if($dist_bounds < $current_min_dist_bounds) {
+          #  %current_selection = ();
+          #}
+          #$current_selection{$prev_cand->{$feature_type}->attribute('ID')} = $prev_cand->{$feature_type};
+          $current_selection{$curr_cand->{$feature_type}->attribute('ID')} = $curr_cand->{$feature_type};
+        }
+      }
+    }
+    # If we have something in the current selection; that means that we have
+    # found a good candidate(s)
+    if(%current_selection && (!defined $min_dist || $current_min_dist == $min_dist)) {
+      # We merge candidate hashes
+      @selected_candidates{keys %current_selection} = values %current_selection;
+    # If we do not, we need to count the read for the prev candidate(s)
+    # and continue for next chunks to come
+    } else {
+      foreach my $candidate (keys %selected_candidates) {
+        $counts{$candidate}++;
+      }
+      %selected_candidates = %current_selection;
+    }
+  }
+  # We add to the count table what's left
+  foreach my $candidate (keys %selected_candidates) {
+    $counts{$candidate}++;
+  }
+}
+
+# Now we print output
+my $output = CracTools::Output->new();
+$output->printHeaders(args => \@ARGV_copy);
+foreach my $count_key (sort keys %counts) {
+  $output->printLine($count_key,$counts{$count_key});
+}
+
+## SUBROUTINES
+
+sub getReadChunkCandidates {
+  my ($chr,$start,$end,$strand) = @_;
+  my @potential_candidates;
+  my @candidates;
+  my $is_included = 0;
+  if($is_stranded && defined $strand) {
+    # TODO
+  } else {
+    push(@potential_candidates,@{$annotator->getAnnotationCandidates($chr,$start,$end,1)});
+    push(@potential_candidates,@{$annotator->getAnnotationCandidates($chr,$start,$end,-1)});
+  }
+  foreach my $candidate (@potential_candidates) {
+    # First we want the candidate to have the feature type that we are
+    # counting on
+    if(defined $candidate->{$feature_type}) {
+      # if candidate is included
+      if($candidate->{$feature_type}->start >= $start && $candidate->{$feature_type}->end <= $end) {
+        if(!$is_included) {
+          @candidates = ();
+          $is_included = 1;
+        }
+        # Saving distances from the end or the start of the feature
+        $candidate->{dist_end} = abs($end - $candidate->{$feature_type}->end);
+        $candidate->{dist_start} = abs($candidate->{$feature_type}->start - $start);
+        push(@candidates,$candidate);
+      } elsif(!$is_included) {
+        $candidate->{dist_end} = abs($end - $candidate->{$feature_type}->end);
+        $candidate->{dist_start} = abs($candidate->{$feature_type}->start - $start);
+        push(@candidates,$candidate);
+      }
+    }
+  }
+  return \@candidates;
+}
