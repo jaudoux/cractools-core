@@ -351,6 +351,25 @@ sub pairedEndSeqFileIterator {
   };
 }
 
+=head2 writeSeq
+
+  CracTools::Utils::writeSeq($filehandle,$format,$seq_name,$seq,$seq_qual)
+
+Write the sequence in the output stream with the specified format.
+
+=cut
+
+sub writeSeq {
+  my ($fh,$format,$name,$seq,$qual) = @_;
+  if($format eq 'fasta') {
+    print $fh ">$name\n$seq\n";
+  } elsif($format eq 'fastq') {
+    print $fh '@'."$name\n$seq\n+\n$qual\n";
+  } else {
+    die "Unknown file format. Must be either a FASTA or a FASTQ";
+  }
+}
+
 =head2 bedFileIterator 
 
 manage BED files format
