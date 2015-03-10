@@ -84,7 +84,6 @@ use warnings;
 
 use Carp;
 use CracTools::GFF::Annotation;
-#use CracTools::GFF::Query;
 use CracTools::Interval::Query;
 use CracTools::Interval::Query::File;
 use List::Util qw[min max];
@@ -220,33 +219,85 @@ sub foundSameGene {
 
 sub getBestAnnotationCandidate {
   my $self = shift;
+  my ($best_candidates,$best_priority,$best_type) = $self->getBestAnnotationCandidates(@_);
+  if(@{$best_candidates}) {
+    return $best_candidates->[0],$best_priority,$best_type;
+  } else {
+    return undef,undef,undef;
+  }
+}
+
+=head2 getBestAnnotationCandidates
+
+  Arg [1] : String - chr
+  Arg [2] : String - pos_start
+  Arg [3] : String - pos_end
+  Arg [4] : String - strand
+  Arg [5] : (Optional) Subroutine - see C<getCandidatePriorityDefault> for more details
+  Arg [6] : (Optional) Subroutine - see C<compareTwoCandidatesDefault> for more details
+
+  Description : Return best annotation candidates according to the priorities given
+                by the subroutine(s) in argument.
+  ReturnType  : ArrayRef[HashRef{ feature_name => CracTools::GFF::Annotation, ...}, ...], Int(priority), String(type)
+
+=cut
+
+sub getBestAnnotationCandidates {
+  my $self = shift;
   my ($chr,$pos_start,$pos_end,$strand,$prioritySub,$compareSub) = @_;
 
-  $prioritySub = \&getCandidatePriorityDefault unless defined $prioritySub;
-  $compareSub = \&compareTwoCandidatesDefault unless defined $compareSub;
+  if(!defined $prioritySub && !defined $compareSub) {
+    $prioritySub = \&getCandidatePriorityDefault unless defined $prioritySub;
+    $compareSub = \&compareTwoCandidatesDefault unless defined $compareSub;
+  }
 
   my @candidates = @{ $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand)};
-  my ($best_priority,$best_candidate,$best_type,$candidate_chosen);
+  my @best_candidates;
+  my ($best_priority,$best_type);
   foreach my $candi (@candidates) {
-    my ($priority,$type) = $prioritySub->($pos_start,$pos_end,$candi);
-    if($priority != -1) {
-      if(!defined $best_priority || $priority < $best_priority) {
+    my ($priority,$type);
+    ($priority,$type) = $prioritySub->($pos_start,$pos_end,$candi) if defined $prioritySub;
+    if(defined $priority && $priority != -1) {
+      if(!defined $best_priority) {
         $best_priority = $priority;
-        $best_candidate = $candi;
+        push @best_candidates, $candi;
+        $best_type = $type;
+      } elsif($priority < $best_priority) {
+        @best_candidates = ($candi);
+        $best_priority = $priority;
         $best_type = $type;
       }
       #we should compare two candidates with equal priority to always choose the one
-      elsif ($priority == $best_priority){
-        $candidate_chosen = $compareSub->($best_candidate,$candi,$pos_start);
-        if (defined $candidate_chosen && $candidate_chosen == $candi) {
-            $best_priority = $priority;
-            $best_candidate = $candi;
-            $best_type = $type;
+      elsif (!defined $priority || $priority == $best_priority){
+        my $candidate_chosen;
+        my $found_better_candidate = 0;
+        foreach my $best_candidate (@best_candidates) {
+          $candidate_chosen = $compareSub->($best_candidate,$candi,$pos_start,$pos_end) if defined $compareSub;
+          # They are both equal
+          if (!defined $candidate_chosen) {
+            # We cannnot say if this candidate is better
+            next;
+          } elsif ($candidate_chosen == $candi) {
+            # We have found a better candidate that previously register ones
+            # we save it and remove the others
+            @best_candidates = ($candi);
+            $found_better_candidate = 1;
+            last;
+          } else {
+            # The better candidate is not "candi", so this candidates
+            # does not belong the the best_candidate array.
+            # We can stop looping
+            $found_better_candidate = 1;
+            last;
+          }
         }
+        push @best_candidates, $candi if !$found_better_candidate;
       }
     }
   }
-  return $best_candidate,$best_priority,$best_type;
+  # TODO We should not return variable in that order,
+  # it is not easy to only retrieve the best candidatse...
+  return \@best_candidates,$best_priority,$best_type;
 }
 
 =head2 getAnnotationCandidates
@@ -389,7 +440,8 @@ sub getCandidatePriorityDefault {
 
   Arg [1] : hash - candidate1
   Arg [2] : hash - candidate2
-  Arg [3] : pos_start
+  Arg [3] : pos_start (position start that has been queried)
+  Arg [4] : pos_end (position end that has been queried)
 
   Description : Default method used to chose the best candidat when priority are equals
                 You can create your own priority method to fit your specific need
