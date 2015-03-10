@@ -9,11 +9,10 @@ use Getopt::Long qw(:config auto_version ); # Get options
 use Carp;
 use Pod::Usage;
 use CracTools;
-use CracTools::Utils;
-#use CracTools::Interval::Query::File;
-use CracTools::Annotator;
-use CracTools::Output;
-use Data::Dumper;
+use CracTools::Utils; # For multi-purpose tasks
+use CracTools::Annotator; # This help to index the annotation file for fast query
+use CracTools::Output; # For printing output column-based file
+use Data::Dumper; # Debugging purpose
 
 =head1 SYNOPSIS
 
@@ -62,88 +61,79 @@ pod2usage(-verbose => 1)  unless defined $bam_file;
 
 my $annotator = CracTools::Annotator->new($annot_file,"fast");
 #my $annotator = CracTools::Annotator->new($annot_file);
+print STDERR "Annotator created\n";
 
 my $bam_it = CracTools::Utils::bamFileIterator($bam_file,"");
 
 my %counts;
 
 while(my $line = $bam_it->()) {
-  #  qname => $qname,
-  #  flag => $flag,
-  #  rname => $rname,
-  #  pos => $pos,
-  #  mapq => $mapq,
-  #  cigar => \@cigar_hash,
-  #  rnext => $rnext,
-  #  pnext => $pnext,
-  #  tlen => $tlen,
-  #  seq => $seq,
-  #  qual => $qual,
-  #  extended_fields => \@others,
   my $sam_line = CracTools::Utils::parseSAMLineLite($line);
 
   # Find read chunks and register for each on of them a list of candidates
   my $low = $sam_line->{pos};
   my $high = $low;
+  my $strand = $sam_line->{flag} & 16? -1 : 1;
   my @candidates;
+  my $nb_chunk = 0;
   foreach my $cigar_chunk (@{$sam_line->{cigar}}) {
     if($cigar_chunk->{op} =~ 'N') {
-      push(@candidates,getReadChunkCandidates($sam_line->{rname},$low,$high));
+      if($nb_chunk == 0) {
+        # This chunk's end should be close to an exon end
+        push(@candidates,getReadChunkCandidates($sam_line->{rname},$low,$high,$strand,\&compareSubExonEnd));
+      } else {
+        # This chunk's boundaries should correspond to an exon
+        push(@candidates,getReadChunkCandidates($sam_line->{rname},$low,$high,$strand,\&compareSubExon));
+      }
       $low = $high + $cigar_chunk->{nb};
       $high = $low;
+      $nb_chunk++;
     } elsif($cigar_chunk->{op} !~ /[SHI]./) {
       $high = $high + $cigar_chunk->{nb};
     }
   }
   # Conting the last chunk
-  push(@candidates,getReadChunkCandidates($sam_line->{rname},$low,$high));
+  # This chunk's start should correspond to an exon start
+  push(@candidates,getReadChunkCandidates($sam_line->{rname},$low,$high,$strand,\&compareSubExonStart));
   
   my $min_dist;
-  my $min_dist_bounds;
   # First we init the hash of selected candidates for the first chunk
   my %selected_candidates;
   foreach my $first_chunk_cand (@{$candidates[0]}) {
     $selected_candidates{$first_chunk_cand->{$feature_type}->attribute('ID')} = $first_chunk_cand->{$feature_type};
   }
   # We loop over all chunk candidates to find the best annotation feater
-  # TODO we could do something more elegant when counting "transcripts features"
   # by selecting those that have the same exons.
   for(my $i = 1; $i < @candidates -1; $i++) {
     my %current_selection;
     my $current_min_dist;# = $min_dist;
-    my $current_min_dist_bounds;
     # We do the intersection with the previous chunk
     foreach my $prev_cand (@{$candidates[$i-1]}) {
-      my $prev_cand_parent_feature = $feature_type;
+      my $prev_parent_feat = $feature_type;
       foreach my $curr_cand (@{$candidates[$i]}) {
-        my $curr_cand_parent_feature = $feature_type;
+        my $curr_parent_feat = $feature_type;
         my $dist = 0;
-        my $dist_bounds = $prev_cand->{dist_end} + $curr_cand->{dist_start};
         # We declare a hash that stores "already seen features" in order
         # to avoid infinite loop.
         my %avoid_recurs;
-        while(defined $prev_cand_parent_feature && defined $curr_cand_parent_feature && $prev_cand->{$prev_cand_parent_feature}->attribute('ID') ne $curr_cand->{$curr_cand_parent_feature}->attribute('ID')) {
+        while(defined $prev_parent_feat && defined $curr_parent_feat &&
+          $prev_cand->{$prev_parent_feat}->attribute('ID') ne $curr_cand->{$curr_parent_feat}->attribute('ID')) {
           $dist++;
-          my $prev_cand_parent_feature = $prev_cand->{parent_feature}->{$prev_cand_parent_feature};
-          my $curr_cand_parent_feature = $curr_cand->{parent_feature}->{$curr_cand_parent_feature};
-          if(defined $avoid_recurs{$prev_cand_parent_feature} || 
-            defined $avoid_recurs{$curr_cand_parent_feature}) {
+          my $prev_parent_feat = $prev_cand->{parent_feature}->{$prev_parent_feat};
+          my $curr_parent_feat = $curr_cand->{parent_feature}->{$curr_parent_feat};
+          if(defined $avoid_recurs{$prev_parent_feat} || 
+            defined $avoid_recurs{$curr_parent_feat}) {
             carp "GFF deep recursion\n";
             last;
           }
-          $avoid_recurs{$prev_cand_parent_feature} = 1;
-          $avoid_recurs{$curr_cand_parent_feature} = 1;
+          $avoid_recurs{$prev_parent_feat} = 1;
+          $avoid_recurs{$curr_parent_feat} = 1;
         }
         if(!defined $current_min_dist || $dist < $current_min_dist) {
           $current_min_dist = $dist;
-          $current_min_dist_bounds = $dist_bounds;
           %current_selection = ();
         }
         if($dist == $current_min_dist) {
-          #if($dist_bounds < $current_min_dist_bounds) {
-          #  %current_selection = ();
-          #}
-          #$current_selection{$prev_cand->{$feature_type}->attribute('ID')} = $prev_cand->{$feature_type};
           $current_selection{$curr_cand->{$feature_type}->attribute('ID')} = $curr_cand->{$feature_type};
         }
       }
@@ -178,15 +168,23 @@ foreach my $count_key (sort keys %counts) {
 ## SUBROUTINES
 
 sub getReadChunkCandidates {
-  my ($chr,$start,$end,$strand) = @_;
+  my ($chr,$start,$end,$strand,$compareSub) = @_;
   my @potential_candidates;
   my @candidates;
   my $is_included = 0;
   if($is_stranded && defined $strand) {
     # TODO
   } else {
-    push(@potential_candidates,@{$annotator->getAnnotationCandidates($chr,$start,$end,1)});
-    push(@potential_candidates,@{$annotator->getAnnotationCandidates($chr,$start,$end,-1)});
+    foreach my $query_strand ((1,-1)) {
+      my ($best_candidates) = $annotator->getBestAnnotationCandidates($chr,
+          $start,
+          $end,
+          $query_strand,
+          \&prioritySub, 
+          $compareSub,
+      );
+      push @potential_candidates, @{$best_candidates};
+    }
   }
   foreach my $candidate (@potential_candidates) {
     # First we want the candidate to have the feature type that we are
@@ -198,16 +196,76 @@ sub getReadChunkCandidates {
           @candidates = ();
           $is_included = 1;
         }
-        # Saving distances from the end or the start of the feature
-        $candidate->{dist_end} = abs($end - $candidate->{$feature_type}->end);
-        $candidate->{dist_start} = abs($candidate->{$feature_type}->start - $start);
         push(@candidates,$candidate);
       } elsif(!$is_included) {
-        $candidate->{dist_end} = abs($end - $candidate->{$feature_type}->end);
-        $candidate->{dist_start} = abs($candidate->{$feature_type}->start - $start);
         push(@candidates,$candidate);
       }
     }
   }
   return \@candidates;
+}
+
+sub prioritySub {
+  my ($pos_start,$pos_end,$candidate) = @_;
+  my ($priority,$type) = (-1,'');
+  my $exon = $candidate->{exon};
+  if (defined $exon) {
+    $priority = 1;
+    $type = 'EXON';
+  } else {
+    $priority = 2;
+    $type = 'NO_EXON';
+  }
+  return ($priority,$type);
+}
+
+# Return the candidate that is the closest to exon bounds
+sub compareSubExon {
+  my ($candidate1,$candidate2,$pos_start,$pos_end) = @_;
+  # If both candidates are exons we try to find wich one is closer to the pos_start of the region to annotate
+  if ($candidate1->{exon} && $candidate2->{exon}) { 
+    my $dist1 = abs($candidate1->{exon}->start - $pos_start) + abs($candidate1->{exon}->end - $pos_end);
+    my $dist2 = abs($candidate2->{exon}->start - $pos_start) + abs($candidate2->{exon}->end - $pos_end);
+    if($dist1 < $dist2) {
+      return $candidate1;
+    } elsif($dist1 > $dist2) {
+      return $candidate2;
+    }
+  }
+  # If nothing has worked we return "undef"
+  return undef;
+}
+
+# Return the candidate that is the closest to exon start bound
+sub compareSubExonStart {
+  my ($candidate1,$candidate2,$pos_start,$pos_end) = @_;
+  # If both candidates are exons we try to find wich one is closer to the pos_start of the region to annotate
+  if ($candidate1->{exon} && $candidate2->{exon}) { 
+    my $dist1 = abs($candidate1->{exon}->start - $pos_start);
+    my $dist2 = abs($candidate2->{exon}->start - $pos_start);
+    if($dist1 < $dist2) {
+      return $candidate1;
+    } elsif($dist1 > $dist2) {
+      return $candidate2;
+    }
+  }
+  # If nothing has worked we return "undef"
+  return undef;
+}
+
+# Return the candidate that is the closest to exon end bound
+sub compareSubExonEnd {
+  my ($candidate1,$candidate2,$pos_start,$pos_end) = @_;
+  # If both candidates are exons we try to find wich one is closer to the pos_end of the region to annotate
+  if ($candidate1->{exon} && $candidate2->{exon}) { 
+    my $dist1 = abs($candidate1->{exon}->end - $pos_start);
+    my $dist2 = abs($candidate2->{exon}->end - $pos_start);
+    if($dist1 < $dist2) {
+      return $candidate1;
+    } elsif($dist1 > $dist2) {
+      return $candidate2;
+    }
+  }
+  # If nothing has worked we return "undef"
+  return undef;
 }
