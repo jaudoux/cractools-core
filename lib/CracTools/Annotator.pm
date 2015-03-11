@@ -89,6 +89,11 @@ use CracTools::Interval::Query::File;
 use List::Util qw[min max];
 use CracTools::Const;
 
+=head1 SYNOPSYS
+
+0-based coordinate system
+closed [a,b] intervals
+
 =head1 METHODS
 
 =head2 new
@@ -559,6 +564,8 @@ sub _constructCandidates {
       # the candidate since we are branching in the annotation tree
       }elsif(defined $candidate->{$annot_hash->{$parent}->feature}) {
         my %copy_candidate = %{$candidate}; 
+        my %copy_parent_feature = %{$candidate->{parent_feature}};
+        $copy_candidate{parent_feature} = \%copy_parent_feature; 
         # We register in parent_feature links
         $copy_candidate{parent_feature}->{$annot_hash->{$annot_id}->feature} = $annot_hash->{$parent}->feature;
         my $copy_ref = \%copy_candidate;
