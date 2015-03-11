@@ -82,7 +82,8 @@ sub getCounts {
         $low = $high + $cigar_chunk->{nb};
         $high = $low;
         $nb_chunk++;
-      } elsif($cigar_chunk->{op} !~ /[SHI]./) {
+      } elsif($cigar_chunk->{op} !~ /[SHI]/) {
+        #print STDERR "cigar op: ".$cigar_chunk->{op}."\n";
         $high = $high + $cigar_chunk->{nb};
       }
     }
@@ -167,7 +168,7 @@ sub getCounts {
         # We merge candidate hashes
         @selected_candidates{keys %current_selection} = values %current_selection;
         #%selected_candidates = %current_selection;
-        #print STDERR Dumper(\@selected_candidates);
+        #print STDERR Dumper(\%selected_candidates);
         #$selected_candidates[$i-1] = $current_selection{prev};
         #$selected_candidates[$i] = $current_selection{curr};
         $min_dist = $current_min_dist;
@@ -199,6 +200,7 @@ sub getCounts {
     foreach my $candidate (keys %selected_candidates) {
       if(!$counted_candidates{$candidate}) {;
         $counts{$candidate}++;
+        #print STDERR "$candidate\n";
         $counted_candidates{$candidate} = 1;
       }
     }
