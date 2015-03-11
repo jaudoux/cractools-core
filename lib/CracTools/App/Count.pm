@@ -199,7 +199,6 @@ sub getCounts {
     foreach my $candidate (keys %selected_candidates) {
       if(!$counted_candidates{$candidate}) {;
         $counts{$candidate}++;
-        print STDERR "$candidate\n";
         $counted_candidates{$candidate} = 1;
       }
     }
