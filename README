@@ -23,6 +23,9 @@ Installation is stupidly simple, just download the tarball and run the following
 
   cpanm CracTools-core.tar.gz
 
+You will need an internet connection for cpanm that will download missing modules from CPAN.
+You will also need c++ compiler to be installed for Set::IntervalTree distribution.
+
 
 Philosophy
 ==========
