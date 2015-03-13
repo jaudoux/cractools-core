@@ -31,71 +31,67 @@ use File::Basename;
 
 =cut  
 
-run() unless caller();
+my @ARGV_copy = @ARGV;
 
-sub run {
-  my @ARGV_copy = @ARGV;
+my ($help,
+  $man,
+  $verbose,
+);
 
-  my ($help,
-    $man,
-    $verbose,
-  );
+my $nb_process = 1;
+my $feature_type = "exon";
+my $is_stranded = 0;
 
-  my $nb_process = 1;
-  my $feature_type = "exon";
-  my $is_stranded = 0;
+GetOptions(
+  "v|verbose"         => \$verbose,
+  "p=i"               => \$nb_process,
+  "man"               => \$man,
+  "help"              => \$help,
+  "f=s"               => \$feature_type,
+  "stranded"          => \$is_stranded,
+) or pod2usage(-verbose => 1);
 
-  GetOptions(
-    "v|verbose"         => \$verbose,
-    "p=i"               => \$nb_process,
-    "man"               => \$man,
-    "help"              => \$help,
-    "f=s"               => \$feature_type,
-    "stranded"          => \$is_stranded,
-  ) or pod2usage(-verbose => 1);
+# TODO implement is_stranded 
 
-  # TODO implement is_stranded 
+pod2usage(-verbose => 1)  if ($help);
+pod2usage(-verbose => 2)  if ($man);
 
-  pod2usage(-verbose => 1)  if ($help);
-  pod2usage(-verbose => 2)  if ($man);
+my $annot_file = shift @ARGV;
+pod2usage(-verbose => 1)  unless defined $annot_file;
 
-  my $annot_file = shift @ARGV;
-  pod2usage(-verbose => 1)  unless defined $annot_file;
+#my $bam_file = shift @ARGV;
+pod2usage(-verbose => 1)  unless @ARGV > 0;
 
-  #my $bam_file = shift @ARGV;
-  pod2usage(-verbose => 1)  unless @ARGV > 0;
+my $counter = CracTools::App::Count->new(
+  feature_type => $feature_type, 
+  is_stranded => $is_stranded,
+  gff_file => $annot_file,
+);
 
-  my $counter = CracTools::App::Count->new(
-    feature_type => $feature_type, 
-    is_stranded => $is_stranded,
-    gff_file => $annot_file,
-  );
+my @counts;
+my %counted_features;
+my @sample_names;
 
-  my @counts;
-  my %counted_features;
-  my @sample_names;
-  
-  foreach my $bam_file (@ARGV) {
-    my($filename, $dirs, $suffix) = fileparse($bam_file);
-    push @sample_names,$filename;
-    my %local_counts = %{$counter->getCounts($bam_file)};
-    foreach my $feature (keys %local_counts) {
-      $counted_features{$feature} = 1;
-    }
-    push @counts, \%local_counts;
+foreach my $bam_file (@ARGV) {
+  my($filename, $dirs, $suffix) = fileparse($bam_file);
+  push @sample_names,$filename;
+  my %local_counts = %{$counter->getCounts($bam_file)};
+  foreach my $feature (keys %local_counts) {
+    $counted_features{$feature} = 1;
   }
+  push @counts, \%local_counts;
+}
 
-  # Now we print output
-  my $output = CracTools::Output->new();
-  $output->printHeaders(args => \@ARGV_copy);
-  $output->printHeaderLine("feature",@sample_names);
-  foreach my $count_key (sort keys %counted_features) {
-    my @feat_counts;
-    foreach my $count_hash (@counts) {
-      my $count = $count_hash->{$count_key};
-      $count = 0 unless defined $count;
-      push @feat_counts, $count;
-    }
-    $output->printLine($count_key,@feat_counts);
+# Now we print output
+my $output = CracTools::Output->new();
+$output->printHeaders(args => \@ARGV_copy);
+$output->printHeaderLine("feature",@sample_names);
+foreach my $count_key (sort keys %counted_features) {
+  my @feat_counts;
+  foreach my $count_hash (@counts) {
+    my $count = $count_hash->{$count_key};
+    $count = 0 unless defined $count;
+    push @feat_counts, $count;
   }
+  $output->printLine($count_key,@feat_counts);
 }
