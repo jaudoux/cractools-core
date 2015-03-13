@@ -36,6 +36,9 @@ pod2usage(-verbose => 1)  unless defined $gtf_file;
 my $it = CracTools::Utils::gffFileIterator($gtf_file,'gtf');
 
 while(my $gtf_line = $it->()) {
+
+  next if $gtf_line->{feature} eq 'transcript';
+  next if $gtf_line->{feature} eq 'gene';
   
   my $gene_id = $gtf_line->{attributes}->{gene_id};
   my $trans_id = $gtf_line->{attributes}->{transcript_id};
@@ -48,6 +51,9 @@ while(my $gtf_line = $it->()) {
       $gtf_line->{end}
     );
 
+    my $id = $gtf_line->{attributes}->{$gtf_line->{feature}.'_id'};
+    $id = $feat_key unless defined $id;
+
     if(!defined $features{$feat_key}) {
       $features{$feat_key} = { chr            => $gtf_line->{chr},
                                source         => $gtf_line->{source},
@@ -57,19 +63,23 @@ while(my $gtf_line = $it->()) {
                                score          => $gtf_line->{score},
                                strand         => $gtf_line->{strand},
                                frame          => $gtf_line->{frame},
+                               id             => $id,
                                transcript_ids => [$trans_id],
+                               type           => "feature",
                              };
     } elsif(!(@{$features{$feat_key}{transcript_ids}} ~~ $trans_id)) {
       push(@{$features{$feat_key}{transcript_ids}},$trans_id);
     }
 
     if(!defined $transcripts{$trans_id}) {
-      $transcripts{$trans_id} = { chr     => $gtf_line->{chr},
-                                  source  => $gtf_line->{source},
-                                  start   => $gtf_line->{start},
-                                  end     => $gtf_line->{end},
-                                  strand  => $gtf_line->{strand},
-                                  gene_id => $gene_id,
+      $transcripts{$trans_id} = { chr       => $gtf_line->{chr},
+                                  source    => $gtf_line->{source},
+                                  start     => $gtf_line->{start},
+                                  end       => $gtf_line->{end},
+                                  strand    => $gtf_line->{strand},
+                                  gene_id   => $gene_id,
+                                  transcript_id  => $trans_id,
+                                  type      => "transcript",
                                 };
     } else {
       $transcripts{$trans_id}{start} = $gtf_line->{start} if $gtf_line->{start} < $transcripts{$trans_id}{start};
@@ -77,12 +87,14 @@ while(my $gtf_line = $it->()) {
     }
 
     if(!defined $genes{$gene_id}) {
-      $genes{$gene_id} = { chr    => $gtf_line->{chr},
-                           source => $gtf_line->{source},
-                           start  => $gtf_line->{start},
-                           end    => $gtf_line->{end},
-                           strand => $gtf_line->{strand},
-                           name   => $gtf_line->{attributes}->{gene_name},
+      $genes{$gene_id} = { chr      => $gtf_line->{chr},
+                           source   => $gtf_line->{source},
+                           start    => $gtf_line->{start},
+                           end      => $gtf_line->{end},
+                           strand   => $gtf_line->{strand},
+                           name     => $gtf_line->{attributes}->{gene_name},
+                           gene_id  => $gene_id,
+                           type     => "gene",
                          };
     } else {
       $genes{$gene_id}{start} = $gtf_line->{start} if $gtf_line->{start} < $genes{$gene_id}{start};
@@ -94,40 +106,86 @@ while(my $gtf_line = $it->()) {
 my $output = CracTools::Output->new();
 $output->printLine("##gff-version 3");
 $output->printHeaders(args => \@ARGV_copy);
-foreach my $gene_id (keys %genes) {
-  $output->printLine($genes{$gene_id}{chr},
-    $genes{$gene_id}{source},
-    "gene",
-    $genes{$gene_id}{start},
-    $genes{$gene_id}{end},
-    ".",
-    $genes{$gene_id}{strand},
-    ".",
-    "ID=$gene_id;Name=".$genes{$gene_id}{name},
-  );
-}
-foreach my $trans_id (keys %transcripts) {
-  $output->printLine($transcripts{$trans_id}{chr},
-    $transcripts{$trans_id}{source},
-    "mRNA",
-    $transcripts{$trans_id}{start},
-    $transcripts{$trans_id}{end},
-    ".",
-    $transcripts{$trans_id}{strand},
-    ".",
-    "ID=$trans_id;Parent=".$transcripts{$trans_id}{gene_id}
-  );
+
+my @all_annotations;
+push @all_annotations, values %features;
+push @all_annotations, values %transcripts;
+push @all_annotations, values %genes;
+
+# Sort annotations by start pos
+my @sorted_annotations = sort {$a->{start} <=> $b->{start}} @all_annotations;
+
+foreach my $annot (@sorted_annotations) {
+  if($annot->{type} eq "gene") {
+    $output->printLine($annot->{chr},
+      $annot->{source},
+      "gene",
+      $annot->{start},
+      $annot->{end},
+      ".",
+      $annot->{strand},
+      ".",
+      "ID=$annot->{gene_id};Name=".$annot->{name},
+    );
+  } elsif($annot->{type} eq "transcript") {
+    $output->printLine($annot->{chr},
+      $annot->{source},
+      "mRNA",
+      $annot->{start},
+      $annot->{end},
+      ".",
+      $annot->{strand},
+      ".",
+      "ID=$annot->{transcript_id};Parent=".$annot->{gene_id}
+    );
+  } else {
+    $output->printLine($annot->{chr},
+      $annot->{source},
+      $annot->{feature},
+      $annot->{start},
+      $annot->{end},
+      $annot->{score},
+      $annot->{strand},
+      $annot->{frame},
+      "ID=$annot->{id};Parent=".join(",",@{$annot->{transcript_ids}})
+    );
+  }
 }
 
-foreach my $feat_id (keys %features) {
-  $output->printLine($features{$feat_id}{chr},
-    $features{$feat_id}{source},
-    $features{$feat_id}{feature},
-    $features{$feat_id}{start},
-    $features{$feat_id}{end},
-    $features{$feat_id}{score},
-    $features{$feat_id}{strand},
-    $features{$feat_id}{frame},
-    "ID=$feat_id;Parent=".join(",",@{$features{$feat_id}{transcript_ids}})
-  );
-}
+#foreach my $gene_id (keys %genes) {
+#  $output->printLine($genes{$gene_id}{chr},
+#    $genes{$gene_id}{source},
+#    "gene",
+#    $genes{$gene_id}{start},
+#    $genes{$gene_id}{end},
+#    ".",
+#    $genes{$gene_id}{strand},
+#    ".",
+#    "ID=$gene_id;Name=".$genes{$gene_id}{name},
+#  );
+#}
+#foreach my $trans_id (keys %transcripts) {
+#  $output->printLine($transcripts{$trans_id}{chr},
+#    $transcripts{$trans_id}{source},
+#    "mRNA",
+#    $transcripts{$trans_id}{start},
+#    $transcripts{$trans_id}{end},
+#    ".",
+#    $transcripts{$trans_id}{strand},
+#    ".",
+#    "ID=$trans_id;Parent=".$transcripts{$trans_id}{gene_id}
+#  );
+#}
+#
+#foreach my $feat_id (keys %features) {
+#  $output->printLine($features{$feat_id}{chr},
+#    $features{$feat_id}{source},
+#    $features{$feat_id}{feature},
+#    $features{$feat_id}{start},
+#    $features{$feat_id}{end},
+#    $features{$feat_id}{score},
+#    $features{$feat_id}{strand},
+#    $features{$feat_id}{frame},
+#    "ID=$feat_id;Parent=".join(",",@{$features{$feat_id}{transcript_ids}})
+#  );
+#}

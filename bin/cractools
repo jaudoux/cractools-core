@@ -22,6 +22,7 @@ my $command = shift;
 
 my %commands = (extract => 'cractools-extract',
   count => 'cractools-count',
+  gtf2togff3 => 'cractools-gtf2togff3',
 );
 
 if(defined $command && defined $commands{$command}) {
