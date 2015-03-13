@@ -15,9 +15,17 @@ sub new {
 
   my %args = @_;
 
+  my $annot_file = $args{gff_file};
+
+  croak "Missing gff_file argument" unless defined $annot_file;
+
+  # Create an annotator object to query the GFF annotation file
+  my $annotator = CracTools::Annotator->new($annot_file,"fast");
+
   my $self = bless {
     feature_type => $args{feature_type},
     is_stranded => $args{is_stranded},
+    annotator => $annotator,
   }, $class;
 
   return $self;
@@ -33,32 +41,56 @@ sub featureType {
   return $self->{feature_type};
 }
 
+sub annotator {
+  my $self = shift;
+  return $self->{annotator};
+}
+
 sub getCounts {
   my $self = shift;
-  my ($annot_file,$bam_file) = @_;
+  my $bam_file = shift;
 
-  # Create an annotator object to query the GFF annotation file
-  my $annotator = CracTools::Annotator->new($annot_file,"fast");
-  #my $annotator = CracTools::Annotator->new($annot_file);
+  my $annotator = $self->annotator;
   print STDERR "Annotator created\n";
 
   my $bam_it = CracTools::Utils::bamFileIterator($bam_file,"");
 
   my %counts;
+  my $prev_pos = 0;
+  my $prev_cigar = "";
+  my @prev_candidates = ();
 
   while(my $line = $bam_it->()) {
+    # We parse the sam line with a lightweigh method
     my $sam_line = CracTools::Utils::parseSAMLineLite($line);
+    if($prev_pos == $sam_line->{pos} && $prev_cigar eq $sam_line->{original_cigar}) {
+      foreach my $cand (@prev_candidates) {
+        $counts{$cand}++;
+      }
+      # We go to next sam line and avoid the counting process
+      next;
+    } else {
+      @prev_candidates = ();
+      $prev_pos = $sam_line->{pos};
+      $prev_cigar = $sam_line->{original_cigar};
+    }
     #print STDERR "Read: ".$sam_line->{qname}."\n";
 
-    # Find read chunks and register for each on of them a list of candidates
+    # #################
+    # 1. Find read chunks and register for each on of them a list of candidates
     # -1 because annotator use a 0-basede coordinate system
     my $low = $sam_line->{pos} - 1;
     my $high = $low;
     my $strand = $sam_line->{flag} & 16? -1 : 1;
+    # This table will hold the candidates for each chunk of the read
     my @candidates;
     my $nb_chunk = 0;
     foreach my $cigar_chunk (@{$sam_line->{cigar}}) {
+      # If we have a N operator in the sequence it means that we have a splited
+      # read that may correspond to a splice junction
       if($cigar_chunk->{op} =~ 'N') {
+        # If this is the first chunk we see, we try to find candidates
+        # that have exon's end close to our chunk's end
         if($nb_chunk == 0) {
           # This chunk's end should be close to an exon end
           push(@candidates,$self->getReadChunkCandidates($annotator,
@@ -70,6 +102,8 @@ sub getCounts {
           );
           #print STDERR Dumper(\@candidates);
         } else {
+          # If this is not the first chunk, then we have a middle chunk
+          # that should correspond to a whole exon
           # This chunk's boundaries should correspond to an exon
           push(@candidates,$self->getReadChunkCandidates($annotator,
               $sam_line->{rname},
@@ -79,15 +113,19 @@ sub getCounts {
               \&compareSubExon)
           );
         }
+        # We adjust boundaries to start the new chunk
         $low = $high + $cigar_chunk->{nb};
         $high = $low;
         $nb_chunk++;
       } elsif($cigar_chunk->{op} !~ /[SHI]/) {
+        # We move the upper bound further
         #print STDERR "cigar op: ".$cigar_chunk->{op}."\n";
         $high = $high + $cigar_chunk->{nb};
       }
     }
-    # Conting the last chunk
+    # We have reach the cigar, we can count the last chunk
+    # If this read is not spliced, we try to find a candidate where
+    # the read ins included in an exon
     if($nb_chunk == 0) {
       push(@candidates,$self->getReadChunkCandidates($annotator,
           $sam_line->{rname},
@@ -97,8 +135,8 @@ sub getCounts {
           \&compareSubExonIncluded)
       );
     } else {
-      # TODO $high -1?
-      # This chunk's start should correspond to an exon start
+      # This chunk is a last one of a spliced read, it should
+      # correspond to an exon start
       push(@candidates,$self->getReadChunkCandidates($annotator,
           $sam_line->{rname},
           $low,
@@ -108,9 +146,16 @@ sub getCounts {
       );
     }
     
+    # #################
+    # 2. We loop over the candidates by comparing candidates of adjacent
+    #    chunks and finding the best possible candidates:
+    #
+    #    - If two adjacent chunk contains candidate with the same feature
+    #      that we are conting
+    #    - If there is no such feature we look for the closest mutual parent
+    #      of each candidate, and keeps only
     my $min_dist;
     # First we init the hash of selected candidates for the first chunk
-    #my @selected_candidates = ({});
     my %counted_candidates;
     my %selected_candidates;
     if(@candidates < 2) {
@@ -129,7 +174,6 @@ sub getCounts {
           my $prev_parent_feat = $self->featureType;
           my $curr_parent_feat = $self->featureType;
 
-          #print STDERR $prev_cand->{$self->featureType}->attribute('ID'). " VS ".$curr_cand->{$self->featureType}->attribute('ID')."\n";
           my $dist = 0;
           # We declare a hash that stores "already seen features" in order
           # to avoid infinite loop.
@@ -148,17 +192,13 @@ sub getCounts {
             $prev_parent_feat = $prev_cand->{parent_feature}->{$prev_parent_feat};
             $curr_parent_feat = $curr_cand->{parent_feature}->{$curr_parent_feat};
           }
-          #print STDERR "Dist: $dist\n";
           if(!defined $current_min_dist || $dist < $current_min_dist) {
             $current_min_dist = $dist;
             %current_selection = ();
           }
           if($dist == $current_min_dist) {
-            #$selected_candidates{$prev_cand->{$self->featureType}->attribute('ID')} = 1;
             $current_selection{$curr_cand->{$self->featureType}->attribute('ID')} = $curr_cand->{$self->featureType};
             $current_selection{$prev_cand->{$self->featureType}->attribute('ID')} = $prev_cand->{$self->featureType};
-            #$current_selection{prev}->{$prev_cand->{$self->featureType}->attribute('ID')} = $prev_cand->{$self->featureType};
-            #$current_selection{curr}->{$curr_cand->{$self->featureType}->attribute('ID')} = $curr_cand->{$self->featureType};
           }
         }
       }
@@ -167,48 +207,27 @@ sub getCounts {
       if(%current_selection && (!defined $min_dist || $current_min_dist == $min_dist)) {
         # We merge candidate hashes
         @selected_candidates{keys %current_selection} = values %current_selection;
-        #%selected_candidates = %current_selection;
-        #print STDERR Dumper(\%selected_candidates);
-        #$selected_candidates[$i-1] = $current_selection{prev};
-        #$selected_candidates[$i] = $current_selection{curr};
         $min_dist = $current_min_dist;
       # If we do not, we need to count the read for the prev candidate(s)
       # and continue for next chunks to come
       } else {
-        #foreach my $chunk_candidates (@selected_candidates) {
-        #  foreach my $candidate(keys %{$chunk_candidates}) {
-        #    $counts{$candidate}++;
-        #  }
-        #}
-        #@selected_candidates = ();
-        #%selected_candidates = %current_selection;
-        #$selected_candidates[$i] = $current_selection{curr};
         foreach my $candidate (keys %selected_candidates) {
-          if(!$counted_candidates{$candidate}) {
-            $counts{$candidate}++;
-            #print STDERR "$candidate\n";
-            $counted_candidates{$candidate} = 1;
-          }
-
+          $counted_candidates{$candidate} = 1;
         }
-        #%selected_candidates = ();
         %selected_candidates = %current_selection;
         $min_dist = $current_min_dist;
       }
     }
     # We add to the count table what's left
     foreach my $candidate (keys %selected_candidates) {
-      if(!$counted_candidates{$candidate}) {;
-        $counts{$candidate}++;
-        #print STDERR "$candidate\n";
-        $counted_candidates{$candidate} = 1;
-      }
+      $counted_candidates{$candidate} = 1;
     }
-    #foreach my $chunk_candidates (@selected_candidates) {
-    #  foreach my $candidate(keys %{$chunk_candidates}) {
-    #    $counts{$candidate}++;
-    #  }
-    #}
+
+    # Now we count all candidates the we have encounter
+    foreach my $candidate (keys %counted_candidates) {
+      $counts{$candidate}++;
+      push(@prev_candidates,$candidate);
+    }
   }
 
   return \%counts;

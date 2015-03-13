@@ -10,6 +10,7 @@ use Carp;
 use Pod::Usage;
 use CracTools::App::Count;
 use CracTools::Output; # For printing output column-based file
+use File::Basename;
 
 =head1 SYNOPSIS
 
@@ -22,6 +23,11 @@ use CracTools::Output; # For printing output column-based file
   -f                     Feature type to count
   -v|--verbose           Verbose mode
   -p=INT                 Number of process to run (default:1)
+
+=head1 TODO
+
+- [ ] We should read multiple BAM files and merge the results into a single print. It could also be a way to simply multi-thread cractools-count
+- [ ] We could improve speed by looking if adjacent record in the SAM avec the exact same profile (same start and cigar)
 
 =cut  
 
@@ -56,16 +62,40 @@ sub run {
   my $annot_file = shift @ARGV;
   pod2usage(-verbose => 1)  unless defined $annot_file;
 
-  my $bam_file = shift @ARGV;
-  pod2usage(-verbose => 1)  unless defined $bam_file;
+  #my $bam_file = shift @ARGV;
+  pod2usage(-verbose => 1)  unless @ARGV > 0;
 
-  my $counter = CracTools::App::Count->new(feature_type => $feature_type, is_stranded => $is_stranded);
-  my %counts = %{$counter->getCounts($annot_file,$bam_file)};
+  my $counter = CracTools::App::Count->new(
+    feature_type => $feature_type, 
+    is_stranded => $is_stranded,
+    gff_file => $annot_file,
+  );
+
+  my @counts;
+  my %counted_features;
+  my @sample_names;
+  
+  foreach my $bam_file (@ARGV) {
+    my($filename, $dirs, $suffix) = fileparse($bam_file);
+    push @sample_names,$filename;
+    my %local_counts = %{$counter->getCounts($bam_file)};
+    foreach my $feature (keys %local_counts) {
+      $counted_features{$feature} = 1;
+    }
+    push @counts, \%local_counts;
+  }
 
   # Now we print output
   my $output = CracTools::Output->new();
   $output->printHeaders(args => \@ARGV_copy);
-  foreach my $count_key (sort keys %counts) {
-    $output->printLine($count_key,$counts{$count_key});
+  $output->printHeaderLine("feature",@sample_names);
+  foreach my $count_key (sort keys %counted_features) {
+    my @feat_counts;
+    foreach my $count_hash (@counts) {
+      my $count = $count_hash->{$count_key};
+      $count = 0 unless defined $count;
+      push @feat_counts, $count;
+    }
+    $output->printLine($count_key,@feat_counts);
   }
 }

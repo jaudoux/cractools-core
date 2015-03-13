@@ -693,7 +693,6 @@ sub parseChimCTLine {
 sub parseSAMLineLite {
   my $line = shift;
   my ($qname,$flag,$rname,$pos,$mapq,$cigar,$rnext,$pnext,$tlen,$seq,$qual,@others) = split("\t",$line);
-  #my %cigar_hash = map { substr($_,-1) => substr($_,0,length($_)-2) }  $cigar =~ /(\d+)(\D)/;
   my @cigar_hash = map { { op => substr($_,-1), nb => substr($_,0,length($_)-1)} } $cigar =~ /(\d+\D)/g;
   return {
     qname => $qname,
@@ -702,6 +701,7 @@ sub parseSAMLineLite {
     pos => $pos,
     mapq => $mapq,
     cigar => \@cigar_hash,
+    original_cigar => $cigar,
     rnext => $rnext,
     pnext => $pnext,
     tlen => $tlen,
