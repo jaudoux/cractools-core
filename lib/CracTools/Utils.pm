@@ -414,7 +414,7 @@ manage GFF3 and GTF2 file format
 
 Example:
 
-  my $it = gffFileIterator($file);
+  my $it = gffFileIterator($file,'type');
   while (my $annot = $it->()) {
     print "chr    : $annot->{chr}
            start  : $annot->{start}
@@ -733,7 +733,7 @@ sub getFileIterator {
   if(!defined $parsing_method && defined $type) {
     if($type =~ /gff3/i || $type eq 'gtf' || $type eq 'gff2') {
       $header_regex = '^#';
-      $parsing_method = \&parseGFFLine;
+      $parsing_method = sub { return parseGFFLine(@_,$type) };
       push (@parsing_arguments,$type);
     } elsif($type =~ /bed/i) {
       $header_regex = '^track\s';

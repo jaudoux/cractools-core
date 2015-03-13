@@ -1,0 +1,133 @@
+#! /usr/bin/perl
+# ABSTRACT: Convert GFT2 files to GFF3 format
+# PODNAME: cractools gtf2togff3
+
+use strict;
+use warnings;
+
+use Getopt::Long qw(:config auto_version ); # Get options
+use Carp;
+use Pod::Usage;
+use CracTools::Output; # For printing output column-based file
+use CracTools::Utils;
+
+=head1 SYNOPSIS
+
+Convert gtf2 fils to gff3, and merge exons that have the exact same coordinates.
+
+  cractools gtf2togff3 [options] file.gtf > file.gff
+
+=head1 OPTIONS
+
+  --help                 Print this help
+  --man                  Open man page
+
+=cut  
+
+my %genes;
+my %transcripts;
+my %features;
+
+my @ARGV_copy = @ARGV;
+
+my $gtf_file = shift @ARGV;
+pod2usage(-verbose => 1)  unless defined $gtf_file;
+
+my $it = CracTools::Utils::gffFileIterator($gtf_file,'gtf');
+
+while(my $gtf_line = $it->()) {
+  
+  my $gene_id = $gtf_line->{attributes}->{gene_id};
+  my $trans_id = $gtf_line->{attributes}->{transcript_id};
+
+  if(defined $gene_id && defined $trans_id) {
+
+    my $feat_key = join("@",$gtf_line->{chr},
+      $gtf_line->{feature},
+      $gtf_line->{start},
+      $gtf_line->{end}
+    );
+
+    if(!defined $features{$feat_key}) {
+      $features{$feat_key} = { chr            => $gtf_line->{chr},
+                               source         => $gtf_line->{source},
+                               feature        => $gtf_line->{feature},
+                               start          => $gtf_line->{start},
+                               end            => $gtf_line->{end},
+                               score          => $gtf_line->{score},
+                               strand         => $gtf_line->{strand},
+                               frame          => $gtf_line->{frame},
+                               transcript_ids => [$trans_id],
+                             };
+    } elsif(!(@{$features{$feat_key}{transcript_ids}} ~~ $trans_id)) {
+      push(@{$features{$feat_key}{transcript_ids}},$trans_id);
+    }
+
+    if(!defined $transcripts{$trans_id}) {
+      $transcripts{$trans_id} = { chr     => $gtf_line->{chr},
+                                  source  => $gtf_line->{source},
+                                  start   => $gtf_line->{start},
+                                  end     => $gtf_line->{end},
+                                  strand  => $gtf_line->{strand},
+                                  gene_id => $gene_id,
+                                };
+    } else {
+      $transcripts{$trans_id}{start} = $gtf_line->{start} if $gtf_line->{start} < $transcripts{$trans_id}{start};
+      $transcripts{$trans_id}{end} = $gtf_line->{end} if $gtf_line->{end} > $transcripts{$trans_id}{end};
+    }
+
+    if(!defined $genes{$gene_id}) {
+      $genes{$gene_id} = { chr    => $gtf_line->{chr},
+                           source => $gtf_line->{source},
+                           start  => $gtf_line->{start},
+                           end    => $gtf_line->{end},
+                           strand => $gtf_line->{strand},
+                           name   => $gtf_line->{attributes}->{gene_name},
+                         };
+    } else {
+      $genes{$gene_id}{start} = $gtf_line->{start} if $gtf_line->{start} < $genes{$gene_id}{start};
+      $genes{$gene_id}{end} = $gtf_line->{end} if $gtf_line->{end} > $genes{$gene_id}{end};
+    }
+  }
+}
+
+my $output = CracTools::Output->new();
+$output->printLine("##gff-version 3");
+$output->printHeaders(args => \@ARGV_copy);
+foreach my $gene_id (keys %genes) {
+  $output->printLine($genes{$gene_id}{chr},
+    $genes{$gene_id}{source},
+    "gene",
+    $genes{$gene_id}{start},
+    $genes{$gene_id}{end},
+    ".",
+    $genes{$gene_id}{strand},
+    ".",
+    "ID=$gene_id;Name=".$genes{$gene_id}{name},
+  );
+}
+foreach my $trans_id (keys %transcripts) {
+  $output->printLine($transcripts{$trans_id}{chr},
+    $transcripts{$trans_id}{source},
+    "mRNA",
+    $transcripts{$trans_id}{start},
+    $transcripts{$trans_id}{end},
+    ".",
+    $transcripts{$trans_id}{strand},
+    ".",
+    "ID=$trans_id;Parent=".$transcripts{$trans_id}{gene_id}
+  );
+}
+
+foreach my $feat_id (keys %features) {
+  $output->printLine($features{$feat_id}{chr},
+    $features{$feat_id}{source},
+    $features{$feat_id}{feature},
+    $features{$feat_id}{start},
+    $features{$feat_id}{end},
+    $features{$feat_id}{score},
+    $features{$feat_id}{strand},
+    $features{$feat_id}{frame},
+    "ID=$feat_id;Parent=".join(",",@{$features{$feat_id}{transcript_ids}})
+  );
+}
