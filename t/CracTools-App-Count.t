@@ -18,9 +18,9 @@ use File::Temp;
   while(<SAM>) {print $sam_file $_;}
   close $sam_file;
 
-  my $counter_exon = CracTools::App::Count->new(feature_type => "exon", is_stranded => 0);
+  my $counter_exon = CracTools::App::Count->new(gff_file => $gff_file, feature_type => "exon", is_stranded => 0);
 
-  my %exons_counts = %{$counter_exon->getCounts($gff_file,$sam_file)};
+  my %exons_counts = %{$counter_exon->getCounts($sam_file)};
   #my $counts = CracTools::App::Count::getCounts($gff_file,$sam_file,"exon",0);
   is($exons_counts{E1},3);
   is($exons_counts{E1b},3);
@@ -30,8 +30,8 @@ use File::Temp;
   is($exons_counts{E4},1);
   is($exons_counts{E5},1);
 
-  my $counter_transcripts = CracTools::App::Count->new(feature_type => "mRNA", is_stranded => 0);
-  my %transcripts_counts = %{$counter_transcripts->getCounts($gff_file,$sam_file)};
+  my $counter_transcripts = CracTools::App::Count->new(gff_file => $gff_file, feature_type => "mRNA", is_stranded => 0);
+  my %transcripts_counts = %{$counter_transcripts->getCounts($sam_file)};
   #my $counts = CracTools::App::Count::getCounts($gff_file,$sam_file,"exon",0);
   is($transcripts_counts{T1},2);
   is($transcripts_counts{T2},3);
