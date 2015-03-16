@@ -11,6 +11,7 @@ use Pod::Usage;
 use CracTools::App::Count;
 use CracTools::Output; # For printing output column-based file
 use File::Basename;
+use Parallel::ForkManager 0.7.6;
 
 =head1 SYNOPSIS
 
@@ -68,19 +69,39 @@ my $counter = CracTools::App::Count->new(
   gff_file => $annot_file,
 );
 
+# Create Fork pool
+my $pm = Parallel::ForkManager->new($nb_process);
+
 my @counts;
 my %counted_features;
 my @sample_names;
 
+$pm -> run_on_finish ( # called BEFORE the first call to start()
+  sub {
+    my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_structure_reference) = @_;
+
+    # retrieve chimeras from childs
+    if (defined($data_structure_reference)) {
+      my %local_counts = %{$data_structure_reference->{local_counts}};
+      foreach my $feature (keys %local_counts) {
+        $counted_features{$feature} = 1;
+      }
+      push @counts, \%local_counts;
+    }
+  }
+);
+
+BAM_FILE:
 foreach my $bam_file (@ARGV) {
+  # Fork regions
+  $pm->start() and next BAM_FILE;
+
   my($filename, $dirs, $suffix) = fileparse($bam_file);
   push @sample_names,$filename;
   my %local_counts = %{$counter->getCounts($bam_file)};
-  foreach my $feature (keys %local_counts) {
-    $counted_features{$feature} = 1;
-  }
-  push @counts, \%local_counts;
+  $pm->finish(0,{local_counts => \%local_counts});
 }
+$pm->wait_all_children;
 
 # Now we print output
 my $output = CracTools::Output->new();
