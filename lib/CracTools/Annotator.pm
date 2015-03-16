@@ -552,9 +552,9 @@ sub _constructCandidates {
       carp("Missing feature for $annot_id in the gff file");
   }
   $candidate->{$annot_hash->{$annot_id}->feature} = $annot_hash->{$annot_id};
-  my @parents = $annot_hash->{$annot_id}->parents;
-  if(@parents) {
-    foreach my $parent (@parents) {
+  my $parents = $annot_hash->{$annot_id}->parents;
+  if(@$parents) {
+    foreach my $parent (@{$parents}) {
       
       #Test to avoid a deep recursion
       if($parent eq $annot_id) {
@@ -614,17 +614,17 @@ sub _constructCandidatesFromAnnotation {
   # Find leaves in annotation tree
   my %hash_leaves; 
   foreach my $annot_id (keys %annot_hash) {
-      my @parents = $annot_hash{$annot_id}->parents;
-      foreach my $parent (@parents){
-	  $hash_leaves{$parent} = 1 unless (defined $hash_leaves{$parent});
-      }
+    #my @parents = $annot_hash{$annot_id}->parents;
+    foreach my $parent (@{$annot_hash{$annot_id}->parents}){
+      $hash_leaves{$parent} = 1 unless (defined $hash_leaves{$parent});
+    }
   }
   foreach my $annot_id (keys %annot_hash) {
-      # check if annot_id is a leaf
-      if (!defined $hash_leaves{$annot_id}){
-        # Get all possible path from this leaf to the root
-	  push @candidates, @{_constructCandidates($annot_id,my $new_candidate,\%annot_hash)};
-      }
+    # check if annot_id is a leaf
+    if (!defined $hash_leaves{$annot_id}){
+      # Get all possible path from this leaf to the root
+      push @candidates, @{_constructCandidates($annot_id,my $new_candidate,\%annot_hash)};
+    }
   }
 
   return \@candidates;

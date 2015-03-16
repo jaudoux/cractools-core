@@ -179,6 +179,10 @@ sub _init {
 	croak "Missing format argument (gff3,gtf) in CracTools::GFF::Annotation constructor";
     }
     if(defined $k && defined $v) {
+      if($k eq "Parent") {
+        my @parents = split(',',$v);
+        $v = \@parents;
+      }
       $self->{attributes}{$k} = $v;
     } #else {
     #  carp("Error parsing attribute $attr");
@@ -330,9 +334,9 @@ sub phase {
 sub parents {
   my $self = shift;
   if(defined $self->attribute('Parent')) {
-    return split(',',$self->attribute('Parent'));
+    return $self->attribute('Parent');
   } else {
-    return ();
+    return [];
   }
 }
 
