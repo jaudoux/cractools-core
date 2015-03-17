@@ -51,7 +51,6 @@ sub getCounts {
   my $bam_file = shift;
 
   my $annotator = $self->annotator;
-  print STDERR "Annotator created\n";
 
   my $bam_it = CracTools::Utils::bamFileIterator($bam_file,"");
 
@@ -98,7 +97,8 @@ sub getCounts {
               $low,
               $high,
               $strand,
-              \&compareSubExonEnd)
+              \&compareSubExonEnd
+            )
           );
           #print STDERR Dumper(\@candidates);
         } else {
@@ -110,7 +110,8 @@ sub getCounts {
               $low,
               $high,
               $strand,
-              \&compareSubExon)
+              \&compareSubExon
+            )
           );
         }
         # We adjust boundaries to start the new chunk
@@ -132,7 +133,8 @@ sub getCounts {
           $low,
           $high,
           $strand,
-          \&compareSubExonIncluded)
+          \&compareSubExonIncluded
+        )
       );
     } else {
       # This chunk is a last one of a spliced read, it should
@@ -288,29 +290,17 @@ sub prioritySub {
 
 sub compareSubExonIncluded {
   my ($candidate1,$candidate2,$pos_start,$pos_end) = @_;
-  # If both candidates are exons we try to find wich one is closer to the pos_start of the region to annotate
+  # If both candidates are exons we try to find wich one is closer to the
+  # pos_start of the region to annotate
   if ($candidate1->{exon} && $candidate2->{exon}) { 
-    if($pos_start >= $candidate1->{exon}->start && $pos_start < $candidate2->{exon}->start) {
-      if($pos_end <= $candidate1->{exon}->end && $pos_end > $candidate2->{exon}->end) {
-        return $candidate1;
-      } else {
-        return undef;
-      }
-    } elsif($pos_start < $candidate1->{exon}->start && $pos_start >= $candidate2->{exon}->start) {
-      if($pos_end > $candidate1->{exon}->end && $pos_end <= $candidate2->{exon}->end) {
-        return $candidate2;
-      } else {
-        return undef;
-      }
-    } else {
-      if($pos_end > $candidate1->{exon}->end && $pos_end <= $candidate2->{exon}->end) {
-        return $candidate2;
-      } elsif($pos_end <= $candidate1->{exon}->end && $pos_end > $candidate2->{exon}->end) {
-        return $candidate1;
-      } else {
-        # both exon candidates includes the region
-        return undef;
-      }
+    my $candidate1_included = $pos_start >= $candidate1->{exon}->start && 
+                              $pos_end   <= $candidate1->{exon}->end;
+    my $candidate2_included = $pos_start >= $candidate2->{exon}->start &&
+                              $pos_end   <= $candidate2->{exon}->end;
+    if($candidate1_included && !$candidate2_included) {
+      return $candidate1;
+    } elsif($candidate2_included && !$candidate1_included) {
+      return $candidate2;
     }
   }
   # If nothing has worked we return "undef"
@@ -320,7 +310,8 @@ sub compareSubExonIncluded {
 # Return the candidate that is the closest to exon bounds
 sub compareSubExon {
   my ($candidate1,$candidate2,$pos_start,$pos_end) = @_;
-  # If both candidates are exons we try to find wich one is closer to the pos_start of the region to annotate
+  # If both candidates are exons we try to find wich one is closer to the
+  # pos_start of the region to annotate
   if ($candidate1->{exon} && $candidate2->{exon}) { 
     my $dist1 = abs($candidate1->{exon}->start - $pos_start) + abs($candidate1->{exon}->end - $pos_end);
     my $dist2 = abs($candidate2->{exon}->start - $pos_start) + abs($candidate2->{exon}->end - $pos_end);
@@ -337,7 +328,8 @@ sub compareSubExon {
 # Return the candidate that is the closest to exon start bound
 sub compareSubExonStart {
   my ($candidate1,$candidate2,$pos_start,$pos_end) = @_;
-  # If both candidates are exons we try to find wich one is closer to the pos_start of the region to annotate
+  # If both candidates are exons we try to find wich one is closer to the
+  # pos_start of the region to annotate
   if ($candidate1->{exon} && $candidate2->{exon}) { 
     my $dist1 = abs($candidate1->{exon}->start - $pos_start);
     my $dist2 = abs($candidate2->{exon}->start - $pos_start);
@@ -354,7 +346,8 @@ sub compareSubExonStart {
 # Return the candidate that is the closest to exon end bound
 sub compareSubExonEnd {
   my ($candidate1,$candidate2,$pos_start,$pos_end) = @_;
-  # If both candidates are exons we try to find wich one is closer to the pos_end of the region to annotate
+  # If both candidates are exons we try to find wich one is closer to the
+  # pos_end of the region to annotate
   if ($candidate1->{exon} && $candidate2->{exon}) { 
     my $dist1 = abs($candidate1->{exon}->end - $pos_end);
     my $dist2 = abs($candidate2->{exon}->end - $pos_end);
