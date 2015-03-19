@@ -93,11 +93,11 @@ $pm -> run_on_finish ( # called BEFORE the first call to start()
 
 BAM_FILE:
 foreach my $bam_file (@ARGV) {
+  my($filename, $dirs, $suffix) = fileparse($bam_file);
+  (my $without_extension = $filename) =~ s/\.[^.]+$//;
+  push @sample_names,$without_extension;
   # Fork regions
   $pm->start() and next BAM_FILE;
-
-  my($filename, $dirs, $suffix) = fileparse($bam_file);
-  push @sample_names,$filename;
   my %local_counts = %{$counter->getCounts($bam_file)};
   $pm->finish(0,{local_counts => \%local_counts});
 }
@@ -106,7 +106,7 @@ $pm->wait_all_children;
 # Now we print output
 my $output = CracTools::Output->new();
 $output->printHeaders(args => \@ARGV_copy);
-$output->printHeaderLine("feature",@sample_names);
+$output->printLine("feature",@sample_names);
 foreach my $count_key (sort keys %counted_features) {
   my @feat_counts;
   foreach my $count_hash (@counts) {
