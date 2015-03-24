@@ -104,14 +104,22 @@ foreach my $file (@ARGV) {
 	my @alllines = <FH>;
 	my $contents = join('', @alllines);
 	print STDERR $contents, "\n" if ($DEBUG);
+	# TODO: should find the key:value to increase speed
 	foreach my $type (keys %patterns) {
 		foreach my $pattern (@{$patterns{$type}}) {
 			print STDERR "pat= $pattern\n" if ($DEBUG);
-			($reads{$file}{$type}{$pattern}) = ($contents =~ /$pattern: (\d+)/ism);
+			if ($contents =~ /$pattern: (\d+)/ism and defined($1)) {
+			  $reads{$file}{$type}{$pattern} = $1;
+      		} else {
+        		$reads{$file}{$type}{$pattern} = 0;
+      		}
 			print STDERR "val=", $reads{$file}{$type}{$pattern}, "\n" if ($DEBUG);
 		}
 	}
-	my ($total_analyze) = ($contents =~ /Total number of reads analyzed: (\d+)/ism);
+  my $total_analyze = 0;
+  if ($contents =~ /Total number of reads analyzed: (\d+)/ism and defined($1)) {
+    my ($totl_analyze) = $1;
+  }
 
 	# calculate total
 	foreach my $type (keys %{$reads{$file}}) {
