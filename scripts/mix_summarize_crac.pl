@@ -19,6 +19,10 @@ Main option :
   -globalonly      	- Show only global mapping values
   -explainedsonly   - Show only explained mapping values
   -output filename  - the filename the stats are written (STDOUT by default)
+  -namecolumns 'columns header'   - Split filename with /-/, and set header columns (ex: Exp-Nb-lib)
+  -separator char                 - Separator (default -) to use to split filename and namecolumns
+  -verbose value                  - verbose mode (2=DEBUG)
+
   -help             - help / usage
   -man              - print man page
 
@@ -27,6 +31,7 @@ Main option :
 This script will create a report with statistic data.
 
 The options are:
+
   -namecolumns 'columns header'   - Split filename with /-/, and set header columns (ex: Exp-Nb-lib)
   -separator char                 - Separator (default -) to use to split filename and namecolumns
   -verbose value                  - verbose mode (2=DEBUG)
