@@ -118,9 +118,8 @@ foreach my $file (@ARGV) {
 	}
   my $total_analyze = 0;
   if ($contents =~ /Total number of reads analyzed: (\d+)/ism and defined($1)) {
-    my ($totl_analyze) = $1;
+    $total_analyze = $1;
   }
-
 	# calculate total
 	foreach my $type (keys %{$reads{$file}}) {
 		my $total = 0;
@@ -128,6 +127,7 @@ foreach my $file (@ARGV) {
 			$total += $reads{$file}{$type}{$pattern};
 		}
 		$reads{$file}{$type}{'Total Reads analyzed'} = $total_analyze;
+    print STDERR "Save $total_analyze in total reads analyzed\n" if ($DEBUG);
 		$reads{$file}{$type}{'Sum reads mapped'} = $total;
 		push @header_sup, 'Sum reads mapped', 'Total Reads analyzed' if (!@header_sup);
 	}
