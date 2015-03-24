@@ -61,7 +61,7 @@ my $verbose = 0;
 my $output;# = \*STDOUT; not good for getoptions
 my %patterns = (
 	'global' => ['Single', 'Duplication', 'Multiple', 'None'],
-	'explained' => ['Explainable', 'Repetition', 'Normal', 'Almost-Normal', 'Sequence-Errors', 'SNV', 'Short-Indel', 'Splice', 'Weak-Splice', 'Chimera', 'Paired-end chimera', 'Bio-Undetermined', 'Undetermined', 'Nothing']
+	'explained' => ['Explainable', 'Repetition', 'Normal', 'Almost-Normal', 'Sequence-Errors', 'SNV', 'Short-Indel', 'Splice', 'Weak-Splice', 'Chimera', 'Bio-Undetermined', 'Undetermined']
 );
 
 my $extension='';
