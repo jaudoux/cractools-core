@@ -19,6 +19,9 @@ generateCracSummary.pl file.sam > file.summary
 
 =head1 DESCRIPTION
 
+Create the crac summary report from a sam, sam.gz or bam file.
+You will get something like :
+
 ----------------------------------
 Some STATISTICS            
 
@@ -54,7 +57,7 @@ Undetermined: 1965574 (2.85958%)
 
 my $sam_file = shift;
 
-die "Missing SAM file in argument" unless defined $sam_file;
+die "Missing SAM(.gz)|BAM file in argument" unless defined $sam_file;
 
 my $reader = CracTools::SAMReader->new($sam_file);
 
