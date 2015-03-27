@@ -562,6 +562,9 @@ sub _constructCandidates {
   next;
       # If there is already a parent with this feature type we duplicated
       # the candidate since we are branching in the annotation tree
+      }elsif(!defined $annot_hash->{$parent}) {
+        carp("Parent not found, please check your gff file for $annot_id (Parent: $parent)");
+      
       }elsif(defined $candidate->{$annot_hash->{$parent}->feature}) {
         my %copy_candidate = %{$candidate}; 
         my %copy_parent_feature = %{$candidate->{parent_feature}};

@@ -28,6 +28,10 @@ use constant MIN_GAP_LENGTH => 0;
   -p=INT                 Number of process to run (default:1)
   --splices=file.bed     Extract splices and print them in a bed file.
 
+=head1 TODO
+
+We should only consider uniquely aligned reads
+
 =cut  
 
 my ($help,
