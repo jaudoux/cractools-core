@@ -81,6 +81,8 @@ my %infos = (Single             => 0,
 
 my $total = 0;
 while (my $line = $it->()) {
+  next if $line->isFlagged(256);
+  next if $line->isFlagged(2048);
     $total++;
 # stats for mapping
     if($line->isClassified('unique')) {
