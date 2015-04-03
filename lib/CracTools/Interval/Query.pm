@@ -146,9 +146,11 @@ sub fetchNearestDown {
   
   if(defined $interval_tree) {
     my $nearest_down = $interval_tree->fetch_nearest_down($position);
-    return ({start => $nearest_down->{start}, end => $nearest_down->{end}},
-      $self->_processReturnValue($nearest_down->{value})
-    );
+    if(defined $nearest_down) {
+      return ({start => $nearest_down->{start}, end => $nearest_down->{end}},
+        $self->_processReturnValue($nearest_down->{value})
+      );
+    }
   }
   return [];
 }
@@ -167,9 +169,11 @@ sub fetchNearestUp {
   
   if(defined $interval_tree) {
     my $nearest_up = $interval_tree->fetch_nearest_up($position);
-    return ({start => $nearest_up->{start}, end => $nearest_up->{end}},
-      $self->_processReturnValue($nearest_up->{value})
-    );
+    if(defined $nearest_up) {
+      return ({start => $nearest_up->{start}, end => $nearest_up->{end}},
+        $self->_processReturnValue($nearest_up->{value})
+      );
+    }
   }
   return [];
 }
