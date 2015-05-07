@@ -54,8 +54,8 @@ while(my $gtf_line = $it->()) {
     my $id = $gtf_line->{attributes}->{$gtf_line->{feature}.'_id'};
     $id = $feat_key unless defined $id;
 
-    if(!defined $features{$feat_key}) {
-      $features{$feat_key} = { chr            => $gtf_line->{chr},
+    if(!defined $features{$id}) {
+      $features{$id} = { chr            => $gtf_line->{chr},
                                source         => $gtf_line->{source},
                                feature        => $gtf_line->{feature},
                                start          => $gtf_line->{start},
@@ -67,8 +67,8 @@ while(my $gtf_line = $it->()) {
                                transcript_ids => [$trans_id],
                                type           => "feature",
                              };
-    } elsif(!(@{$features{$feat_key}{transcript_ids}} ~~ $trans_id)) {
-      push(@{$features{$feat_key}{transcript_ids}},$trans_id);
+    } elsif(!(@{$features{$id}{transcript_ids}} ~~ $trans_id)) {
+      push(@{$features{$id}{transcript_ids}},$trans_id);
     }
 
     if(!defined $transcripts{$trans_id}) {
