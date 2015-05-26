@@ -1,0 +1,118 @@
+#! /usr/bin/perl
+# ABSTRACT: Count reads based on a GFF/GTF annotation file
+# PODNAME: cractools count
+
+use strict;
+use warnings;
+
+use Getopt::Long qw(:config auto_version ); # Get options
+use Carp;
+use Pod::Usage;
+use CracTools::App::Count;
+use CracTools::Output; # For printing output column-based file
+use File::Basename;
+use Parallel::ForkManager 0.7.6;
+
+=head1 SYNOPSIS
+
+  cractools count [options] file.gff file.bam [file2.bam file3.bam]
+
+=head1 OPTIONS
+
+  --help                 Print this help
+  --man                  Open man page
+  -f                     Feature type to count
+  -v|--verbose           Verbose mode
+  -p=INT                 Number of process to run (default:1)
+
+=head1 TODO
+
+- [ ] We should read multiple BAM files and merge the results into a single print. It could also be a way to simply multi-thread cractools-count
+- [ ] We could improve speed by looking if adjacent record in the SAM avec the exact same profile (same start and cigar)
+
+=cut  
+
+my @ARGV_copy = @ARGV;
+
+my ($help,
+  $man,
+  $verbose,
+);
+
+my $nb_process = 1;
+my $feature_type = "exon";
+my $is_stranded = 0;
+
+GetOptions(
+  "v|verbose"         => \$verbose,
+  "p=i"               => \$nb_process,
+  "man"               => \$man,
+  "help"              => \$help,
+  "f=s"               => \$feature_type,
+  "stranded"          => \$is_stranded,
+) or pod2usage(-verbose => 1);
+
+# TODO implement is_stranded 
+
+pod2usage(-verbose => 1)  if ($help);
+pod2usage(-verbose => 2)  if ($man);
+
+my $annot_file = shift @ARGV;
+pod2usage(-verbose => 1)  unless defined $annot_file;
+
+#my $bam_file = shift @ARGV;
+pod2usage(-verbose => 1)  unless @ARGV > 0;
+
+my $counter = CracTools::App::Count->new(
+  feature_type => $feature_type, 
+  is_stranded => $is_stranded,
+  gff_file => $annot_file,
+);
+
+# Create Fork pool
+my $pm = Parallel::ForkManager->new($nb_process);
+
+my @counts;
+my %counted_features;
+my @sample_names;
+
+$pm -> run_on_finish ( # called BEFORE the first call to start()
+  sub {
+    my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_structure_reference) = @_;
+
+    # retrieve chimeras from childs
+    if (defined($data_structure_reference)) {
+      my %local_counts = %{$data_structure_reference->{local_counts}};
+      foreach my $feature (keys %local_counts) {
+        $counted_features{$feature} = 1;
+      }
+      push @counts, \%local_counts;
+    }
+  }
+);
+
+BAM_FILE:
+foreach my $bam_file (@ARGV) {
+  my($filename, $dirs, $suffix) = fileparse($bam_file);
+  (my $without_extension = $filename) =~ s/\.[^.]+$//;
+  push @sample_names,$without_extension;
+  # Fork regions
+  $pm->start() and next BAM_FILE;
+  my %local_counts = %{$counter->getCounts($bam_file)};
+  $pm->finish(0,{local_counts => \%local_counts});
+}
+$pm->wait_all_children;
+
+# Now we print output
+my $output = CracTools::Output->new();
+$output->printHeaders(args => \@ARGV_copy);
+$output->printLine("feature",@sample_names);
+foreach my $count_key (sort keys %counted_features) {
+  my @feat_counts;
+  foreach my $count_hash (@counts) {
+    my $count = $count_hash->{$count_key};
+    $count = 0 unless defined $count;
+    push @feat_counts, $count;
+  }
+  $output->printLine($count_key,@feat_counts);
+}

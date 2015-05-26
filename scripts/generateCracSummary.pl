@@ -84,6 +84,8 @@ my %infos = (Single             => 0,
 
 my $total = 0;
 while (my $line = $it->()) {
+  next if $line->isFlagged(256);
+  next if $line->isFlagged(2048);
     $total++;
 # stats for mapping
     if($line->isClassified('unique')) {
@@ -145,7 +147,7 @@ In a given read, a chunk may appear multiple times, while another just appears o
 ----------------------------------
 Explainable: ".$infos{Explainable}." (".$infos{Explainable}*100/$total."%)
 
-Repetition: "."N/A"." ("."N/A"."%)
+Repetition: "."NA"." ("."NA"."%)
 Normal: ".$infos{Normal}." (".$infos{Normal}*100/$total."%)
 Almost-Normal: ".$infos{AlmostNormal}." (".$infos{AlmostNormal}*100/$total."%)
 Sequence-Errors: ".$infos{SequenceErrors}." (".$infos{SequenceErrors}*100/$total."%)
@@ -154,7 +156,7 @@ Short-Indel: ".$infos{ShortIndel}." (".$infos{ShortIndel}*100/$total."%)
 Splice: ".$infos{Splice}." (".$infos{Splice}*100/$total."%)
 Weak-Splice: ".$infos{WeakSplice}." (".$infos{WeakSplice}*100/$total."%)
 Chimera: ".$infos{Chimera}." (".$infos{Chimera}*100/$total."%)
-Paired-end Chimera: "."N/A"." ("."N/A"."%)
+Paired-end Chimera: "."NA"." ("."NA"."%)
 Bio-Undetermined: ".$infos{BioUndetermined}." (".$infos{BioUndetermined}*100/$total."%)
 Undetermined: ".$infos{Undetermined}." (".$infos{Undetermined}*100/$total."%)
 ";

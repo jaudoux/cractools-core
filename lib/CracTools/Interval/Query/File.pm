@@ -62,101 +62,6 @@ sub new {
   return $self;
 }
 
-=head2 fetchAllNearestDown
-
-Search for the closest intervals in downstream that does not contain the query
-and returns an array reference of lines associated to these intervals. 
-
-=cut
-
-sub fetchAllNearestDown {
-  my ($self,$chr,$position,$strand) = @_;
-  my @lines;
-
-  my $nearest_down = $self->fetchNearestDown($chr,$position,$strand); 
-  if(defined $nearest_down) {
-    my $intervals = $self->_getIntervals($nearest_down);
-    # We try to determinate wich interval was matched
-    my $best_interval;
-    foreach my $i (@$intervals) {
-	$i->{strand} = 1 unless defined $i->{strand};
-	if ( $i->{high}    <  $position && 
-           $i->{seqname} eq $chr      && 
-           $i->{strand}  eq $strand ) {
-        if(!defined $best_interval) {
-          $best_interval = $i;
-        } elsif ($best_interval->{high} < $i->{high}) {
-          $best_interval = $i;
-        }
-      }
-    }
-    # We return all lines that belong to this
-    if(defined $best_interval) {
-      my $overlapping_lines = $self->fetchByLocation($chr,$best_interval->{high},$strand);
-      foreach my $line (@$overlapping_lines) {
-        my $intervals = $self->_getIntervals($line);
-        foreach my $i (@$intervals) {
-          if($i->{high}     ==  $best_interval->{high} && 
-             $i->{seqname}  eq  $chr && 
-             $i->{strand}   eq  $strand) {
-            push(@lines,$line);
-            last;
-          }
-        }
-      }
-    }
-  }
-  return \@lines;
-}
-
-=head2 fetchAllNearestUp
-
-Search for the closest intervals in downstream that does not contain the query
-and returns an array reference of lines associated to these intervals. 
-
-=cut
-
-sub fetchAllNearestUp {
-  my ($self,$chr,$position,$strand) = @_;
-  my @lines;
-
-  my $nearest_down = $self->fetchNearestUp($chr,$position,$strand); 
-
-  if(defined $nearest_down) {
-    my $intervals = $self->_getIntervals($nearest_down);
-    # We try to determinate wich interval was matched
-    my $best_interval;
-    foreach my $i (@$intervals) {
-      $i->{strand} = 1 unless defined $i->{strand};
-      if ( $i->{low}    >  $position && 
-           $i->{seqname} eq $chr      && 
-           $i->{strand}  eq $strand ) {
-        if(!defined $best_interval) {
-          $best_interval = $i;
-        } elsif ($best_interval->{low} > $i->{low}) {
-          $best_interval = $i;
-        }
-      }
-    }
-    # We return all lines that belong to this
-    if(defined $best_interval) {
-      my $overlapping_lines = $self->fetchByLocation($chr,$best_interval->{low},$strand);
-      foreach my $line (@$overlapping_lines) {
-        my $intervals = $self->_getIntervals($line);
-        foreach my $i (@$intervals) {
-          if($i->{low}     ==  $best_interval->{low} && 
-             $i->{seqname}  eq  $chr && 
-             $i->{strand}   eq  $strand) {
-            push(@lines,$line);
-            last;
-          }
-        }
-      }
-    }
-  }
-  return \@lines;
-}
-
 =head2 _getIntervals
 
 Return an array reference of intervals associated with the line.
@@ -186,23 +91,6 @@ sub _getLine {
   chomp($line);
   return $line;
 }
-
-#=head2 _getLines
-#
-#=cut
-#
-#sub _getLines {
-#  my ($self,$seek_pos) = @_;
-#  my @lines;
-#  my $fh = $self->{filehandle};
-#  foreach (@$seek_pos) {
-#    seek($fh,$_,SEEK_SET);
-#    my $line = <$fh>;
-#    chomp($line);
-#    push(@lines,$line);
-#  }
-#  return \@lines;
-#}
 
 =head2 _processReturnValue
 

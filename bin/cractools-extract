@@ -10,8 +10,9 @@ use Pod::Usage;
 use CracTools;
 use CracTools::Utils;
 use CracTools::SAMReader::SAMline;
+use Parallel::ForkManager 0.7.6;
 
-use constant CHUNK_SIZE => 1000000;
+use constant CHUNK_SIZE => 10000000;
 use constant GENE_COLOR => 93;
 use constant EXON_COLOR => 92;
 use constant MIN_GAP_LENGTH => 0;
@@ -24,7 +25,12 @@ use constant MIN_GAP_LENGTH => 0;
 
   --help                 Print this help
   --man                  Open man page
+  -p=INT                 Number of process to run (default:1)
   --splices=file.bed     Extract splices and print them in a bed file.
+
+=head1 TODO
+
+We should only consider uniquely aligned reads
 
 =cut  
 
@@ -37,12 +43,15 @@ my ($help,
   $coverless_splices,
 );
 
+my $nb_process = 1;
+
 GetOptions(
   "v|verbose"         => \$verbose,
   "s|splices=s"       => \$splices_file,
   "m|mutations=s"     => \$mutations_file,
   "c|chimeras=s"      => \$chimeras_file,
   "coverless-splices" => \$coverless_splices,
+  "p=i"               => \$nb_process,
   "man"               => \$man,
   "help"              => \$help,
 ) or pod2usage(-verbose => 1);
@@ -69,28 +78,56 @@ if(@regions == 0) {
   }
 }
 
-# Open filehandles on output files
-my $splices_fh = CracTools::Utils::getWritingFileHandle($splices_file) if defined $splices_file;
-my $mutations_fh = CracTools::Utils::getWritingFileHandle($mutations_file) if defined $mutations_file;
-my $chimeras_fh = CracTools::Utils::getWritingFileHandle($chimeras_file) if defined $chimeras_file;
-
-# Print headers on output files
-print $splices_fh "track name=junctions\n" if defined $splices_fh;
-print $mutations_fh "##fileformat=VCFv4.1\n",
-  "###source=$CracTools::DIST (v $CracTools::VERSION)\n",
-  "###INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">\n",
-  "###INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">\n",
-  "###INFO=<ID=CS,Number=A,Type=Float,Description=\"CRAC confidence score\">\n",
-  "##CHROM POS     ID        REF    ALT     QUAL FILTER INFO\n" if defined $mutations_fh;
-print $chimeras_fh "#",join("\t",qw( chr1 pos1 strand1 chr2 pos2 strand2 name score)),"\n" if defined $chimeras_fh;
+# Create Fork pool
+my $pm = Parallel::ForkManager->new($nb_process);
 
 my %chimeras;
+
+# data structure retrieval and handling
+$pm -> run_on_finish ( # called BEFORE the first call to start()
+  sub {
+    my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_structure_reference) = @_;
+
+    # retrieve chimeras from childs
+    if (defined($data_structure_reference)) {
+      my $region_chimeras = $data_structure_reference->{chimeras};
+      foreach my $key (keys %{$region_chimeras}) {
+        my $chim_key = $key;
+        my ($chr1,$pos1,$strand1,$chr2,$pos2,$strand2) = split("@",$chim_key);
+        my $reverse_key = join("@",$chr2,$pos2,$strand2*-1,$chr1,$pos1,$strand1*-1);
+        if(!$is_stranded && defined $chimeras{$reverse_key}) {
+          $chim_key = $reverse_key;
+        }
+        if(defined $chimeras{$chim_key}) {
+          push(@{$chimeras{$chim_key}{reads}},@{$region_chimeras->{$key}->{reads}});
+          $chimeras{$chim_key}{score} += $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
+        } else {
+          $chimeras{$chim_key}{reads} = $region_chimeras->{$key}->{reads};
+          $chimeras{$chim_key}{score} = $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
+        }
+      }
+    }
+  }
+);
+
+my $nb_region = 0;
 # Loop over regions
+REGION:
 foreach my $region (@regions) {
+  $nb_region++;
+
+  # Fork regions
+  $pm->start() and next REGION;
+
+  # Open filehandles on output files
+  my $splices_fh = CracTools::Utils::getWritingFileHandle($splices_file.".".$nb_region) if defined $splices_file;
+  my $mutations_fh = CracTools::Utils::getWritingFileHandle($mutations_file.".".$nb_region) if defined $mutations_file;
+
   my($region_chr,$region_start,$region_end) = $region =~ /(\S+):(\d+)-(\d+)/;
   # Declare hashes that will store events
   my %splices;
   my %mutations;
+  my %region_chimeras;
   my $bam_it = CracTools::Utils::bamFileIterator($bam_file,$region);
   while(my $raw_line = $bam_it->()) {
     my $line = CracTools::SAMReader::SAMline->new($raw_line);
@@ -111,18 +148,48 @@ foreach my $region (@regions) {
       $region_end,
       $bam_file,
     ) if defined $mutations_fh;
-    extractChimerasFromSAMline(\%chimeras,
+    extractChimerasFromSAMline(\%region_chimeras,
       $line,
       $is_stranded,
       $region_chr,
       $region_start,
       $region_end,
-    ) if defined $chimeras_fh;
+    ) if defined $chimeras_file;
   }
   printSplices(\%splices,$splices_fh) if defined $splices_fh;
   printMutations(\%mutations,$mutations_fh) if defined $mutations_fh;
+  $pm->finish(0,{chimeras => \%region_chimeras});
 }
+$pm->wait_all_children;
+
+my $chimeras_fh = CracTools::Utils::getWritingFileHandle($chimeras_file) if defined $chimeras_file;
+print $chimeras_fh "#",join("\t",qw( chr1 pos1 strand1 chr2 pos2 strand2 score reads cover)),"\n" if defined $chimeras_fh;
 printChimeras(\%chimeras,$chimeras_fh) if defined $chimeras_fh;
+
+# Merge Splice and Mutation files
+my $splices_fh = CracTools::Utils::getWritingFileHandle($splices_file) if defined $splices_file;
+my $mutations_fh = CracTools::Utils::getWritingFileHandle($mutations_file) if defined $mutations_file;
+# Print headers on output files
+print $splices_fh "track name=junctions\n" if defined $splices_fh;
+print $mutations_fh "##fileformat=VCFv4.1\n",
+  "###source=$CracTools::DIST (v $CracTools::VERSION)\n",
+  "###INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">\n",
+  "###INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">\n",
+  "###INFO=<ID=CS,Number=A,Type=Float,Description=\"CRAC confidence score\">\n",
+  "##CHROM POS     ID        REF    ALT     QUAL FILTER INFO\n" if defined $mutations_fh;
+
+for (my $region_id = 1; $region_id <= $nb_region; $region_id++) {
+  if(defined $splices_file) {
+    my $fh = CracTools::Utils::getReadingFileHandle($splices_file.".".$region_id);
+    while(my $line = <$fh>) { print $splices_fh $line; }
+    unlink $splices_file.".".$region_id;
+  }
+  if(defined $mutations_file) {
+    my $fh = CracTools::Utils::getReadingFileHandle($mutations_file.".".$region_id);
+    while(my $line = <$fh>) { print $mutations_fh $line; }
+    unlink $mutations_file.".".$region_id;
+  }
+}
 
 sub extractSplicesFromSAMline {
   my ($splices,$line,$is_stranded,$min_gap_length,$coverless_splices,$region_chr,$region_start,$region_end) = @_;
@@ -193,7 +260,7 @@ sub extractSplicesFromSAMline {
 sub printSplices {
   my $splices = shift;
   my $output_fh = shift;
-  foreach my $splice (sort {$a->{chr} <=> $b->{chr} || $a->{pos} <=> $b->{pos}} values  %{$splices}) {
+  foreach my $splice (sort {$a->{chr} cmp $b->{chr} || $a->{pos} <=> $b->{pos}} values  %{$splices}) {
 
     print $output_fh join "\t", $splice->{chr},
                      $splice->{min},
@@ -221,6 +288,8 @@ sub extractMutationsFromSAMline {
       my ($chr,$pos) = ($snp->{loc}->{chr},$snp->{loc}->{pos});
       # We only add SNPS that correspond to the current region
       next if $pos >= $region_end || $pos < $region_start;
+
+      next if $snp->{actual} =~ /N/i;
 
       # Uniq Hash key for SNP
       my $key = 'SNP'.$chr."@".$pos;
@@ -382,9 +451,11 @@ sub extractChimerasFromSAMline {
       }
 
       if(defined $chimeras->{$key}) {
-        push(@{$chimeras->{$key}},$line->qname);
+        push(@{$chimeras->{$key}->{reads}},$line->qname);
+        $chimeras->{$key}->{score} += $chimera->{score} if defined $chimera->{score};
       } else {
-        $chimeras->{$key} = [$line->qname];
+        $chimeras->{$key}->{reads} = [$line->qname];
+        $chimeras->{$key}->{score} = $chimera->{score} if defined $chimera->{score};
       }
     }
   }
@@ -404,8 +475,9 @@ sub printChimeras {
                      $chr2,
                      $pos2,
                      CracTools::Utils::convertStrand($strand2),
-                     join(":",@{$chimeras->{$chim_key}}),
-                     scalar @{$chimeras->{$chim_key}}
+                     defined $chimeras->{$chim_key}->{score}? $chimeras->{$chim_key}->{score}/@{$chimeras->{$chim_key}->{reads}} : 'N/A',
+                     join(",",@{$chimeras->{$chim_key}->{reads}}),
+                     scalar @{$chimeras->{$chim_key}->{reads}}
                      , "\n";
   }
 }

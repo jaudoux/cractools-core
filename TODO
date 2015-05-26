@@ -1,1 +1,12 @@
-- Manage GFF files instead of using Ensembl API (Optional).
+- [x] Manage GFF files instead of using Ensembl API (Optional).
+- [ ] Integrate SAMTOOLS tabix API to read BAM files quicker
+- [ ] Measure Interval::Query::File vs tabix
+- [x] When Querying and interval we want to retrieve the data and the interval that is associated to this data
+- [ ] Add a class for generating standard log files like [process:time] message
+- [ ] Multi-thread cractools-count procedure
+- [ ] Create a library to easily create test that use files as __GFF__
+- [ ] Place binaries buisiness code into Module under CracTools::App:: namespace
+      This way we will be able to test all the code properly!
+- [ ] Test cractools-filterN script
+- [ ] Test cractools-extract script
+- [x] Add multi-bam support for cractools-count

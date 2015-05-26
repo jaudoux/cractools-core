@@ -801,7 +801,7 @@ sub isClassified {
 
 sub events {
   my $self = shift;
-  my $event_type = shift;
+  my $event_type = lc shift;
   $self->loadEvents();#$event_type);
   if(defined $self->{events}{$event_type}) {
     return $self->{events}{$event_type};
@@ -833,10 +833,11 @@ sub loadEvents {
     my @events = split(";",$self->{extended_fields}{XE});
     foreach my $event (@events) {
       my ($event_id,$event_break_id,$event_type,$event_infos) = $event =~ /([^:]+):([^:]+):([^:]+):(.*)/g;
+      $event_type = lc $event_type;
       next if(defined $event_type_to_load && $event_type ne $event_type_to_load);
       if(defined $event_id) {
         my %event_hash;
-        if($event_type eq 'Junction') {
+        if($event_type eq 'junction') {
           my ($type,$pos_read,$loc,$gap) = split(':',$event_infos);
           my ($chr,$pos,$strand) = expandCracLoc($loc);
           %event_hash = ( type => $type,
@@ -844,7 +845,7 @@ sub loadEvents {
                            loc => {chr => $chr, pos => $pos, strand => $strand},
                            gap => $gap,
                          );
-        } elsif($event_type eq 'Ins' || $event_type eq 'Del') {
+        } elsif($event_type eq 'ins' || $event_type eq 'del') {
           my ($score,$pos_read,$loc,$nb) = split(':',$event_infos); 
           my ($chr,$pos,$strand) = expandCracLoc($loc);
           %event_hash = ( score => $score,
@@ -852,7 +853,7 @@ sub loadEvents {
                       loc => {chr => $chr, pos => $pos, strand => $strand},
                       nb => $nb,
                     );
-        } elsif($event_type eq 'SNP') {
+        } elsif($event_type eq 'snp') {
           my ($score,$pos_read,$loc,$expected,$actual) = split(':',$event_infos); 
           my ($chr,$pos,$strand) = expandCracLoc($loc);
           %event_hash = ( score => $score,
@@ -861,7 +862,7 @@ sub loadEvents {
                       expected => $expected,
                       actual => $actual,
                     );
-        } elsif($event_type eq 'Error') {
+        } elsif($event_type eq 'error') {
           my ($type,$pos,$score,$other1,$other2) = split(':',$event_infos); 
           %event_hash = ( score => $score,
                       pos => $pos,
@@ -879,10 +880,10 @@ sub loadEvents {
                       class => $class,
                       score => $score,
                     );
-        } elsif($event_type eq 'Undetermined') {
+        } elsif($event_type eq 'undetermined') {
           %event_hash = ( message => $event_infos,
                     );
-        } elsif($event_type eq 'BioUndetermined') {
+        } elsif($event_type eq 'bioundetermined') {
           my ($pos,$message) = $event_infos =~ /([^:]+):(.*)/; 
           %event_hash = ( pos => $pos,
                       message => $message,

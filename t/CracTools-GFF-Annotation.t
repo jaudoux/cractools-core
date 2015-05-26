@@ -36,7 +36,7 @@ close $gff_file;
 
 my $gff3Annotation = CracTools::GFF::Annotation->new($first_line,'gff3');
 ok($gff3Annotation->attribute("ID") eq 'ENSE00002706393', 'GFF3 attributes parsing (1)');
-ok($gff3Annotation->attribute("Parent") eq 'ENST00000578939', 'GFF3 attributes parsing (2)');
+ok($gff3Annotation->parents->[0] eq 'ENST00000578939', 'GFF3 attributes parsing (2)');
 
 
 __GTF__

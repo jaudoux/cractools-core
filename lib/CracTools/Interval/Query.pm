@@ -67,7 +67,8 @@ sub addInterval {
 
   # We insert the given interval in the IntervalTree
   # pos_end +1 because Interval tree use [a,b) intervals
-  $interval_tree->insert($value,$start,$end+1);
+  #$interval_tree->insert($value,$start,$end+1);
+  $interval_tree->insert({value => $value, start => $start, end => $end},$start,$end+1);
 }
 
 =head2 fetchByRegion
@@ -144,7 +145,12 @@ sub fetchNearestDown {
   my $interval_tree = $self->_getIntervalTree($chr,$strand);
   
   if(defined $interval_tree) {
-    return $self->_processReturnValue($interval_tree->fetch_nearest_down($position));
+    my $nearest_down = $interval_tree->fetch_nearest_down($position);
+    if(defined $nearest_down) {
+      return ({start => $nearest_down->{start}, end => $nearest_down->{end}},
+        $self->_processReturnValue($nearest_down->{value})
+      );
+    }
   }
   return [];
 }
@@ -162,8 +168,71 @@ sub fetchNearestUp {
   my $interval_tree = $self->_getIntervalTree($chr,$strand);
   
   if(defined $interval_tree) {
-    return $self->_processReturnValue($interval_tree->fetch_nearest_up($position));
+    my $nearest_up = $interval_tree->fetch_nearest_up($position);
+    if(defined $nearest_up) {
+      return ({start => $nearest_up->{start}, end => $nearest_up->{end}},
+        $self->_processReturnValue($nearest_up->{value})
+      );
+    }
   }
+  return [];
+}
+
+=head2 fetchAllNearestDown
+
+Search for the closest intervals in downstream that does not contain the query
+and returns an array reference of lines associated to these intervals. 
+
+=cut
+
+sub fetchAllNearestDown {
+  my ($self,$chr,$position,$strand) = @_;
+
+  my ($nearest_down_interval,$nearest_down) = $self->fetchNearestDown($chr,$position,$strand); 
+  if(defined $nearest_down) {
+    # We return all lines that belong to this
+    my ($hits_interval,$hits) = $self->fetchByLocation($chr,$nearest_down_interval->{end},$strand);
+    my @valid_hits;
+    my @valid_hits_interval;
+    for (my $i = 0; $i < @$hits; $i++) {
+      # if this inteval as the same "end" boudaries as the nearest down interval
+      if($hits_interval->[$i]->{end} == $nearest_down_interval->{end}) {
+        push @valid_hits, $hits->[$i];
+        push @valid_hits_interval, $hits_interval->[$i];
+      }
+    }
+    return (\@valid_hits_interval,\@valid_hits);
+  }
+  return [];
+}
+
+=head2 fetchAllNearestUp
+
+Search for the closest intervals in downstream that does not contain the query
+and returns an array reference of lines associated to these intervals. 
+
+=cut
+
+sub fetchAllNearestUp {
+  my ($self,$chr,$position,$strand) = @_;
+
+  my ($nearest_up_interval,$nearest_up) = $self->fetchNearestUp($chr,$position,$strand); 
+
+  if(defined $nearest_up) {
+    # We return all lines that belong to this
+    my ($hits_interval,$hits) = $self->fetchByLocation($chr,$nearest_up_interval->{start},$strand);
+    my @valid_hits;
+    my @valid_hits_interval;
+    for (my $i = 0; $i < @$hits; $i++) {
+      # if this inteval as the same "end" boudaries as the nearest down interval
+      if($hits_interval->[$i]->{start} == $nearest_up_interval->{start}) {
+        push @valid_hits, $hits->[$i];
+        push @valid_hits_interval, $hits_interval->[$i];
+      }
+    }
+    return (\@valid_hits_interval,\@valid_hits);
+  }
+
   return [];
 }
 
@@ -223,10 +292,16 @@ sub _processReturnValues {
   my $self = shift;
   my $return_values = shift;
   my @processed_return_values = ();
+  my @processed_return_intervals = ();
   foreach (@{$return_values}) {
-    push(@processed_return_values, $self->_processReturnValue($_));
+    push(@processed_return_values, $self->_processReturnValue($_->{value}));
+    push(@processed_return_intervals, { 
+        start => $_->{start},
+        end => $_->{end}
+      }
+    );
   }
-  return \@processed_return_values;
+  return (\@processed_return_intervals,\@processed_return_values);
 }
 
 =head2 _processReturnValue

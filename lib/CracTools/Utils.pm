@@ -351,6 +351,25 @@ sub pairedEndSeqFileIterator {
   };
 }
 
+=head2 writeSeq
+
+  CracTools::Utils::writeSeq($filehandle,$format,$seq_name,$seq,$seq_qual)
+
+Write the sequence in the output stream with the specified format.
+
+=cut
+
+sub writeSeq {
+  my ($fh,$format,$name,$seq,$qual) = @_;
+  if($format eq 'fasta') {
+    print $fh ">$name\n$seq\n";
+  } elsif($format eq 'fastq') {
+    print $fh '@'."$name\n$seq\n+\n$qual\n";
+  } else {
+    die "Unknown file format. Must be either a FASTA or a FASTQ";
+  }
+}
+
 =head2 bedFileIterator 
 
 manage BED files format
@@ -395,7 +414,7 @@ manage GFF3 and GTF2 file format
 
 Example:
 
-  my $it = gffFileIterator($file);
+  my $it = gffFileIterator($file,'type');
   while (my $annot = $it->()) {
     print "chr    : $annot->{chr}
            start  : $annot->{start}
@@ -454,6 +473,25 @@ sub vcfFileIterator {
 
 =head2 chimCTFileIterator
 
+Return a hashref with the chimera parsed:
+  
+  {
+    sample            => $sample,                                                    
+    chim_key          => $chim_key,                                                
+    chr1              => $chr1,                                                        
+    pos1              => $pos1,                                                        
+    strand1           => $strand1,                                                  
+    chr2              => $chr2,                                                        
+    pos2              => $pos2,                                                        
+    strand2           => $strand2,                                                  
+    chim_value        => $chim_value,                                            
+    spanning_junction => $spanning_junction,                              
+    spanning_PE       => $spanning_PE,                                          
+    class             => $class,                                                      
+    comments          => { coment_id => 'comment_value', ... },
+    extend_fields     => { extend_field_id => 'extend_field_value', ... },
+  }
+
 =cut
 
 sub chimCTFileIterator {
@@ -483,6 +521,7 @@ SEE ALSO CracTools::SAMReader::SAMline if you need to parse SAMlines easily
 
 sub bamFileIterator {
   my ($file,$region) = @_;
+  $region = "" if !defined $region;
 
   my $fh;
   if($file =~ /\.bam$/) {
@@ -643,9 +682,34 @@ sub parseChimCTLine {
     spanning_PE       => $spanning_PE,                                          
     class             => $class,                                                      
     comments          => \%comments,                                               
-    extend_fields     => \%extend_fields,                                     
+    extended_fields     => \%extend_fields,                                     
   };                                                                      
 } 
+
+=head2 parseSAMLineLite
+
+=cut
+
+sub parseSAMLineLite {
+  my $line = shift;
+  my ($qname,$flag,$rname,$pos,$mapq,$cigar,$rnext,$pnext,$tlen,$seq,$qual,@others) = split("\t",$line);
+  my @cigar_hash = map { { op => substr($_,-1), nb => substr($_,0,length($_)-1)} } $cigar =~ /(\d+\D)/g;
+  return {
+    qname => $qname,
+    flag => $flag,
+    rname => $rname,
+    pos => $pos,
+    mapq => $mapq,
+    cigar => \@cigar_hash,
+    original_cigar => $cigar,
+    rnext => $rnext,
+    pnext => $pnext,
+    tlen => $tlen,
+    seq => $seq,
+    qual => $qual,
+    extended_fields => \@others,
+  };
+}
 
 
 =head1 FILES IO
@@ -669,7 +733,7 @@ sub getFileIterator {
   if(!defined $parsing_method && defined $type) {
     if($type =~ /gff3/i || $type eq 'gtf' || $type eq 'gff2') {
       $header_regex = '^#';
-      $parsing_method = \&parseGFFLine;
+      $parsing_method = sub { return parseGFFLine(@_,$type) };
       push (@parsing_arguments,$type);
     } elsif($type =~ /bed/i) {
       $header_regex = '^track\s';
@@ -680,6 +744,9 @@ sub getFileIterator {
     } elsif ($type =~ /chimCT/i) {
       $header_regex = '^#';
       $parsing_method = \&parseChimCTLine;
+    } elsif ($type =~ /SAM/i || $type =~ /BAM/i) {
+      $header_regex = '^@';
+      $parsing_method = \&parseSAMLineLite;
     } else {
       croak "Undefined format type";
     }
@@ -708,7 +775,7 @@ sub getFileIterator {
   
   # Skip line that match a specific regex
   if(defined $header_regex) {
-    while($line =~ /$header_regex/) {
+    while($line && $line =~ /$header_regex/) {
       $curr_pos = tell($fh);
       $line = <$fh>;
     }
