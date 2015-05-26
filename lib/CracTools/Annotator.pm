@@ -77,7 +77,7 @@
 ###############################################################################
 
 package CracTools::Annotator;
-# ABSTRACT: Generic annotation base on CracTools::GFF::Query
+# ABSTRACT: Generic annotation base on CracTools::GFF::Query::File
 
 use strict;
 use warnings;
@@ -86,7 +86,7 @@ use Carp;
 use Data::Dumper;
 use CracTools::GFF::Annotation;
 #use CracTools::GFF::Query;
-use CracTools::Interval::Query;
+use CracTools::Interval::Query::File;
 use List::Util qw[min max];
 use CracTools::Const;
 
@@ -216,14 +216,14 @@ sub getBestAnnotationCandidate {
     my ($priority,$type) = $prioritySub->($pos_start,$pos_end,$candi);
     if($priority != -1) {
       if(!defined $best_priority || $priority < $best_priority) {
-	$best_priority = $priority;
+        $best_priority = $priority;
         $best_candidate = $candi;
         $best_type = $type;
       }
       #we should compare two candidates with equal priority to always choose the one
       elsif ($priority == $best_priority){
-	$candidate_chosen = $compareSub->($best_candidate,$candi,$pos_start);
-	if (defined $candidate_chosen && ($candidate_chosen == $candi)){
+        $candidate_chosen = $compareSub->($best_candidate,$candi,$pos_start);
+        if (defined $candidate_chosen && $candidate_chosen == $candi) {
             $best_priority = $priority;
             $best_candidate = $candi;
             $best_type = $type;
@@ -374,23 +374,32 @@ sub getCandidatePriorityDefault {
   Description : Default method used to chose the best candidat when priority are equals
                 You can create your own priority method to fit your specific need
                 for selecting the best candidat.
-  ReturnType  : hash - best candidat
+  ReturnType  : hash - best candidat or undef if we cannot decide which candidate is the best
 
 =cut
 sub compareTwoCandidatesDefault{
-    my ($candidate1,$candidate2,$pos_start) = @_;
-    if ($candidate1->{exon} && $candidate2->{exon}){ 
-	my $dist1= min(abs($candidate1->{exon}->end - $pos_start),abs($candidate1->{exon}->start - $pos_start));
-	my $dist2= min(abs($candidate2->{exon}->end - $pos_start),abs($candidate2->{exon}->start - $pos_start));
-	if ($dist1 > $dist2){
-	    return $candidate2;
-	}else{
-	    return $candidate1;
-	}
-    }else{
-	return undef;
+  my ($candidate1,$candidate2,$pos_start) = @_;
+  # If both candidates are exons we try to find wich one is closer to the pos_start of the region to annotate
+  if ($candidate1->{exon} && $candidate2->{exon}) { 
+    my $dist1= min(abs($candidate1->{exon}->end - $pos_start),abs($candidate1->{exon}->start - $pos_start));
+    my $dist2= min(abs($candidate2->{exon}->end - $pos_start),abs($candidate2->{exon}->start - $pos_start));
+    if ($dist1 > $dist2) {
+      return $candidate2;
+    } elsif ($dist1 < $dist2) {
+      return $candidate1;
     }
-    
+  }
+  # If we have not found a better candidate, we use the lexicographic order of the mRNA ID
+  my ($mRNA1,$mRNA2) = ($candidate1->{mRNA},$candidate2->{mRNA});
+  if(defined $mRNA1 && defined $mRNA1->attribute('ID') && defined $mRNA2 && defined $mRNA2->attribute('ID')) {
+    if($mRNA1->attribute('ID') lt $mRNA2->attribute('ID')) {
+      return $candidate1;
+    } else {
+      return $candidate2;
+    }
+  }
+  # If nothing has worked we return "undef"
+  return undef;
 }
 
 
@@ -409,7 +418,7 @@ sub _init {
   my $self = shift;
 
   # Create a GFF file to query exons
-  my $gff_query = CracTools::Interval::Query->new(file => $self->{gff_file}, type => 'gff');
+  my $gff_query = CracTools::Interval::Query::File->new(file => $self->{gff_file}, type => 'gff');
   $self->{gff_query} = $gff_query;
 
 }
@@ -458,7 +467,7 @@ sub _constructCandidate {
 
   Arg [1] : Hash ref - annotations
             Annotions is a hash reference where keys are coordinates
-            given by CracTools::Interval::Query objects.
+            given by CracTools::Interval::Query::File objects.
   Description : _constructCandidate is a recursive method that build a
                 candidate hash.
   ReturnType  : Candidate array ref of all candidates built by _constructCandidate

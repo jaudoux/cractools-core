@@ -1,0 +1,36 @@
+#! /usr/bin/perl
+# ABSTRACT: Extract, format, classify and annote events identified by CRAC.
+# PODNAME: cractools
+
+use strict;
+use warnings;
+
+use Getopt::Long qw(GetOptionsFromArray :config auto_version ); # Get options
+use Pod::Usage;
+use CracTools;
+use CracTools::Utils;
+use CracTools::SAMReader::SAMline;
+
+use constant CHUNK_SIZE => 1000000;
+use constant GENE_COLOR => 93;
+use constant EXON_COLOR => 92;
+use constant MIN_GAP_LENGTH => 0;
+
+=head1 SYNOPSIS
+
+  cractools extract
+  cractools help (this message)
+
+=cut
+
+# Get the command arguments
+my $command = shift;
+
+my %commands = (extract => 'cractools-extract');
+
+if(defined $command && defined $commands{$command}) {
+  system($commands{$command},@ARGV);
+} else {
+  pod2usage(-verbose => 1);
+  exit 0;
+}

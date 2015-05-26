@@ -1,5 +1,5 @@
 package CracTools::Interval::Query;
-# ABSTRACT: Query intervals in various type of files
+# ABSTRACT: Store and query genomics intervals.
 #
 
 use strict;
@@ -7,16 +7,15 @@ use warnings;
 
 use CracTools::Utils;
 use Set::IntervalTree 0.10;
-use Fcntl qw( SEEK_SET );
 use Carp;
+
+=head1 METHODS
 
 =head2 new
 
-  Arg [1] : String - GFF file
-
-  Example     : my $gffQuery = CracTools::GFF::Query->new('annotations.gff');
-  Description : Create a new GFF Query object
-  ReturnType  : CracTools::GFF::Query
+  Example     : my $intervalQuery = CracTools::Interval::Query->new();
+  Description : Create a new CracTools::Interval::Query object
+  ReturnType  : CracTools::Interval::Query
   Exceptions  : none
 
 =cut
@@ -26,39 +25,49 @@ sub new {
 
   my %args = @_;
 
-  my $file = $args{file};
-  croak "Missing file" unless defined $file;
-
-  my $get_interval_sub = $args{get_interval_sub};
-
-  my $header_skip = "#";
-  $header_skip = $args{header_skip} if defined $args{header_skip};
-
-  if(!defined $get_interval_sub) {
-    my $type = $args{type};
-    croak "Missing type" unless defined $type;
-    if($type =~ /gff/i) {
-      $get_interval_sub = \&_getIntervalsFromGFFLine;
-    } elsif($type =~ /sam/i) {
-      $get_interval_sub = \&_getIntervalsFromSAMLine;
-      $header_skip = "@";
-    } elsif($type =~ /bed/i) {
-      $get_interval_sub = \&_getIntervalsFromBEDLine;
-      $header_skip = "track";
-    } else {
-      croak "Undefined type ($type)";
-    }
-  }
-
   my $self = bless {
-    get_interval_sub => $get_interval_sub,
-    header_skip => $header_skip,
-    file => $file,
-  }, $class;
-
-  $self->_init();
+    interval_trees => {},
+    }, $class;
 
   return $self;
+}
+
+=head2 addInterval
+
+  Arg [1] : String $chr
+            The name of the sequence region that the slice will be
+            created on.
+  Arg [2] : int $start
+            The start of the slice on the sequence region
+  Arg [3] : int $end
+            The end of the slice on the sequence region
+  Arg [4] : int $strand
+            The orientation of the slice on the sequence region (1 or -1)
+  Arg [5] : Any scalar $value
+            The value to be hold by this interval. It can be anything,
+            an integer, a hash reference, an array reference, ...
+
+  Example     :
+  Description : Add a new genomic interval, with an associated value to the structure
+
+=cut
+
+sub addInterval {
+  my $self = shift;
+  my ($chr,$start,$end,$strand,$value) = @_;
+
+  my $interval_tree = $self->_getIntervalTree($chr,$strand);
+  # If there is no already existing IntervalTree for this ("chr","strand") pair
+  if(!defined $interval_tree) {
+    # We create a new one
+    $interval_tree = Set::IntervalTree->new;
+    # We add this new interval tree with the others
+    $self->_addIntervalTree($chr,$strand,$interval_tree);
+  }
+
+  # We insert the given interval in the IntervalTree
+  # pos_end +1 because Interval tree use [a,b) intervals
+  $interval_tree->insert($value,$start,$end+1);
 }
 
 =head2 fetchByRegion
@@ -70,7 +79,7 @@ sub new {
             The start of the slice on the sequence region
   Arg [3] : int $end
             The end of the slice on the sequence region
-  Arg [4] : int $strand
+  Arg [4] : (Optional) int $strand
             The orientation of the slice on the sequence region
   Arg [5] : (Optional) Boolean $windowed
             Only return lines whose intervals are completely contained
@@ -87,22 +96,17 @@ sub fetchByRegion {
   my ($self,$chr,$pos_start,$pos_end,$strand,$windowed) = @_;
 
   my $interval_tree = $self->_getIntervalTree($chr,$strand);
-  my $lines = [];
   
   if(defined $interval_tree) {
-    my $seek_values;
     if(defined $windowed && $windowed) {
       # pos_end +1 because Interval tree use [a,b) intervals
-      $seek_values = $interval_tree->fetch_window($pos_start,$pos_end+1);
+      return $self->_processReturnValues($interval_tree->fetch_window($pos_start,$pos_end+1));
     } else {
       # pos_end +1 because Interval tree use [a,b) intervals
-      $seek_values = $interval_tree->fetch($pos_start,$pos_end+1);
+      return $self->_processReturnValues($interval_tree->fetch($pos_start,$pos_end+1));
     }
-
-    $lines = $self->_getLines($seek_values);
   }
-
-  return $lines;
+  return [];
 }
 
 =head2 fetchByLocation
@@ -138,60 +142,11 @@ sub fetchNearestDown {
   my ($self,$chr,$position,$strand) = @_;
 
   my $interval_tree = $self->_getIntervalTree($chr,$strand);
-  my $line;
   
   if(defined $interval_tree) {
-    my $seek_pos = $interval_tree->fetch_nearest_down($position);
-    $line = $self->_getLine($seek_pos) if defined $seek_pos;
+    return $self->_processReturnValue($interval_tree->fetch_nearest_down($position));
   }
-  return $line;
-}
-
-=head2 fetchAllNearestDown
-
-Search for the closest intervals in downstream that does not contain the query
-and returns an array reference of lines associated to these intervals. 
-
-=cut
-
-sub fetchAllNearestDown {
-  my ($self,$chr,$position,$strand) = @_;
-  my @lines;
-
-  my $nearest_down = $self->fetchNearestDown($chr,$position,$strand); 
-  if(defined $nearest_down) {
-    my $intervals = $self->_getIntervals($nearest_down);
-    # We try to determinate wich interval was matched
-    my $best_interval;
-    foreach my $i (@$intervals) {
-	$i->{strand} = 1 unless defined $i->{strand};
-	if ( $i->{high}    <  $position && 
-           $i->{seqname} eq $chr      && 
-           $i->{strand}  eq $strand ) {
-        if(!defined $best_interval) {
-          $best_interval = $i;
-        } elsif ($best_interval->{high} < $i->{high}) {
-          $best_interval = $i;
-        }
-      }
-    }
-    # We return all lines that belong to this
-    if(defined $best_interval) {
-      my $overlapping_lines = $self->fetchByLocation($chr,$best_interval->{high},$strand);
-      foreach my $line (@$overlapping_lines) {
-        my $intervals = $self->_getIntervals($line);
-        foreach my $i (@$intervals) {
-          if($i->{high}     ==  $best_interval->{high} && 
-             $i->{seqname}  eq  $chr && 
-             $i->{strand}   eq  $strand) {
-            push(@lines,$line);
-            last;
-          }
-        }
-      }
-    }
-  }
-  return \@lines;
+  return [];
 }
 
 =head2 fetchNearestUp
@@ -205,256 +160,88 @@ sub fetchNearestUp {
   my ($self,$chr,$position,$strand) = @_;
 
   my $interval_tree = $self->_getIntervalTree($chr,$strand);
-  my $line;
   
   if(defined $interval_tree) {
-    my $seek_pos = $interval_tree->fetch_nearest_up($position);
-    $line = $self->_getLine($seek_pos) if defined $seek_pos;
+    return $self->_processReturnValue($interval_tree->fetch_nearest_up($position));
   }
-  return $line;
+  return [];
 }
 
-=head2 fetchAllNearestUp
-
-Search for the closest intervals in downstream that does not contain the query
-and returns an array reference of lines associated to these intervals. 
-
-=cut
-
-sub fetchAllNearestUp {
-  my ($self,$chr,$position,$strand) = @_;
-  my @lines;
-
-  my $nearest_down = $self->fetchNearestUp($chr,$position,$strand); 
-
-  if(defined $nearest_down) {
-    my $intervals = $self->_getIntervals($nearest_down);
-    # We try to determinate wich interval was matched
-    my $best_interval;
-    foreach my $i (@$intervals) {
-      $i->{strand} = 1 unless defined $i->{strand};
-      if ( $i->{low}    >  $position && 
-           $i->{seqname} eq $chr      && 
-           $i->{strand}  eq $strand ) {
-        if(!defined $best_interval) {
-          $best_interval = $i;
-        } elsif ($best_interval->{low} > $i->{low}) {
-          $best_interval = $i;
-        }
-      }
-    }
-    # We return all lines that belong to this
-    if(defined $best_interval) {
-      my $overlapping_lines = $self->fetchByLocation($chr,$best_interval->{low},$strand);
-      foreach my $line (@$overlapping_lines) {
-        my $intervals = $self->_getIntervals($line);
-        foreach my $i (@$intervals) {
-          if($i->{low}     ==  $best_interval->{low} && 
-             $i->{seqname}  eq  $chr && 
-             $i->{strand}   eq  $strand) {
-            push(@lines,$line);
-            last;
-          }
-        }
-      }
-    }
-  }
-  return \@lines;
-}
-
-=head2 _getIntervals
-
-Return an array reference of intervals associated with the line.
-
-Interval structure is described by get_interval_sub
-
-=cut
-
-sub _getIntervals {
-  my ($self,$line) = @_;
-  my $intervals = $self->{get_interval_sub}->($line);
-  foreach (@$intervals) {$_->{strand} = 1 if !defined $_->{strand};}
-  return $intervals;
-}
-
-=head2 _getLine
-
-=cut
-
-sub _getLine {
-  my ($self,$seek_pos) = @_;
-  my $fh = $self->{filehandle};
-  seek($fh,$seek_pos,SEEK_SET);
-  my $line = <$fh>;
-  chomp($line);
-  return $line;
-}
-
-=head2 _getLines
-
-=cut
-
-sub _getLines {
-  my ($self,$seek_pos) = @_;
-  my @lines;
-  my $fh = $self->{filehandle};
-  foreach (@$seek_pos) {
-    seek($fh,$_,SEEK_SET);
-    my $line = <$fh>;
-    chomp($line);
-    push(@lines,$line);
-  }
-  return \@lines;
-}
+=head1 PRIVATE METHODS
 
 =head2 _getIntervalTree 
 
-  $self->getIntervalTree($chr,$strand);
+  $self->_getIntervalTree($chr,$strand);
 
-Return the interval tree reference for the chromosome and strand
+Return the Set::IntervalTree reference for the chromosome and strand (Default : 1)
 
 =cut
 
 sub _getIntervalTree {
   my ($self,$chr,$strand) = @_;
+  $strand = 1 if !defined $strand;
   return $self->{interval_trees}{_getIntervalTreeKey($chr,$strand)};
 }
 
-sub _init {
-  my $self = shift;
+=head2 _addIntervalTree
+  
+  $self->_addIntervalTree($chr,$strnad,$interval_tree);
 
-  open(my $fh ,$self->{file}) or die ("Cannot open file ".$self->{file});
-
-  my $curr_pos = tell($fh);
-  my $header_line = 1;
-  my %interval_trees;
-
-  while(<$fh>) {
-
-    # skip headers
-    if($header_line) {
-      if($_ =~ /^$self->{header_skip}/) {
-        next;
-      } else {
-        $header_line = 0;
-      }
-    }
-
-    my $pos = $curr_pos;
-    my $intervals = $self->{get_interval_sub}->($_);
-
-    foreach my $i (@$intervals) {
-      if(defined $i->{low} && defined $i->{high} && defined $i->{seqname}) {
-
-        # Add strand to default if not defined
-        $i->{strand} = 1 unless defined $i->{strand};
-
-        my $key = _getIntervalTreeKey($i->{seqname},$i->{strand});
-        if(!defined $interval_trees{$key}) {
-          $interval_trees{$key} = Set::IntervalTree->new;
-        }
-
-        # high +1 beacause Interval tree use [a,b) intervals
-        $interval_trees{$key}->insert($pos,$i->{low},$i->{high}+1);
-        #$interval_trees{$key}->insert({seek => $pos, low => $i->{low}, high => $i->{high}},$i->{low},$i->{high}+1);
-      }
-    }
-
-    $curr_pos = tell($fh);
-  }
-
-  $self->{filehandle} = $fh;
-  $self->{interval_trees} = \%interval_trees;
-}
-
-=head2 _getIntervalsFrom<FORMAT>Line
-
-Interval must be :
-1-base coordinate system
-Closed intervals
+Add an Set::IntervalTree object for a specific ("chr","strand") pair.
 
 =cut
 
-
-sub _getIntervalsFromGFFLine {
-  my $line = shift;
-  my @fields = split("\t",$line,8);
-  return [{ seqname => $fields[0],
-            low => $fields[3], 
-            high => $fields[4],
-            strand => CracTools::Utils::convertStrand($fields[6]),
-          }];
+sub _addIntervalTree {
+  my ($self,$chr,$strand,$interval_tree) = @_;
+  $strand = 1 if !defined $strand;
+  $self->{interval_trees}{_getIntervalTreeKey($chr,$strand)} = $interval_tree;
 }
 
-sub _getIntervalsFromSAMLine {
-  my $line = shift;
-  my @fields = split("\t",$line,7);
-  my $strand = 1;
-  if($fields[1] & 16) {
-    $strand = -1;
-  }
-  my $low = $fields[3];
-  my $high = $low;
-  my $intervals = [];
-  my $i = 0;
-  my @chunks = $fields[5] =~ /(\d+\D)/g;
-  foreach (@chunks) {
-    my ($nb,$op) = $_ =~ /(\d+)(\D)/;
-    if( $op eq 'N' || $op eq 'D' ) {
-      $intervals->[$i] = { seqname => $fields[2], 
-                           low => $low, 
-                           high =>$high,
-                           strand => $strand,
-                         };
-      $i++;
-      $low = $high + $nb;
-      $high = $low;
-    } elsif ($op ne 'S' || $op ne 'H' || $op ne 'I') {
-      $high += $nb;
-    }
-  }
-  # Add the last chunk
-  $intervals->[$i] = { seqname => $fields[2], 
-                       low => $low, 
-                       high =>$high,
-                       strand => $strand,
-                     };
-  return $intervals;
-}
+=head2 _getIntervalTreeKey
 
-=head2 _getIntervalsFromBEDLine
+  _getIntervalTreeKey($chr,$strand);
 
-We transform BED annotation postions to base-1 positions, and closed intervals
+Static method that return and unique key for the ("chr","strand") pair passed in arguements.
 
 =cut
-
-sub _getIntervalsFromBEDLine {
-  my $line = shift;
-  my @fields = split("\t",$line,13);
-  if(@fields < 12) {
-    return [{ seqname => $fields[0], low => $fields[1]+1, high => $fields[2] }];
-  } else {
-    my $intervals  = [];
-    my $low = $fields[1];
-    my $high;
-    my @block_size = split(',',$fields[10]);
-    my @block_start = split(',',$fields[11]);
-    for(my $i = 0; $i < $fields[9]; $i++) {
-      $low += $block_start[$i]; 
-      $high = $low + $block_size[$i];
-      $intervals->[$i] = { seqname => $fields[0],
-                           low => $low + 1, 
-                           high => $high,
-                           strand => CracTools::Utils::convertStrand($fields[5]),
-                         };
-    }
-    return $intervals;
-  }
-}
 
 sub _getIntervalTreeKey {
   my ($chr,$strand) = @_;
+  $strand = 1 if !defined $strand;
   return "$chr"."@"."$strand";
+}
+
+=head2 _processReturnValues
+
+  $self->_processReturnValues($array_ref)
+
+Call _processReturnValue() method on each values of the array ref passed in parameters.
+
+=cut
+
+sub _processReturnValues {
+  my $self = shift;
+  my $return_values = shift;
+  my @processed_return_values = ();
+  foreach (@{$return_values}) {
+    push(@processed_return_values, $self->_processReturnValue($_));
+  }
+  return \@processed_return_values;
+}
+
+=head2 _processReturnValue
+
+  $self->_processReturnValue($val)
+
+This method process the values contains by each intervals that match a query before returning it.
+It is designed to be overloaded by doughter classes.
+
+=cut
+
+sub _processReturnValue {
+  my $self = shift;
+  my $val = shift;
+  return $val;
 }
 
 1;

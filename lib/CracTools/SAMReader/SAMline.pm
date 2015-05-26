@@ -195,6 +195,9 @@ sub new {
     # Hack in case there is multiple field with the same tag
     $extended_fields{$key} = defined $extended_fields{$key}? $extended_fields{$key}.";".$value : $value;
   }
+  
+  # We do not want any "chr" string before the reference sequence value
+  $rname =~ s/^chr//;
 
   my $self = bless{ 
     qname => $qname,
@@ -867,12 +870,14 @@ sub loadEvents {
                       other2 => $other2,
                     );
         } elsif($event_type eq 'chimera') {
-          my ($pos_read,$loc1,$loc2) = split(':',$event_infos); 
+          my ($pos_read,$loc1,$loc2,$class,$score) = split(':',$event_infos); 
           my ($chr1,$pos1,$strand1) = expandCracLoc($loc1);
           my ($chr2,$pos2,$strand2) = expandCracLoc($loc2);
           %event_hash = ( pos => $pos_read,
                       loc1 => {chr => $chr1, pos => $pos1, strand => $strand1},
                       loc2 => {chr => $chr2, pos => $pos2, strand => $strand2},
+                      class => $class,
+                      score => $score,
                     );
         } elsif($event_type eq 'Undetermined') {
           %event_hash = ( message => $event_infos,
