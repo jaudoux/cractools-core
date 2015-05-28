@@ -3,10 +3,13 @@
 - [ ] Measure Interval::Query::File vs tabix
 - [x] When Querying and interval we want to retrieve the data and the interval that is associated to this data
 - [ ] Add a class for generating standard log files like [process:time] message
-- [ ] Multi-thread cractools-count procedure
+- [X] Multi-thread cractools-count procedure
 - [ ] Create a library to easily create test that use files as __GFF__
-- [ ] Place binaries buisiness code into Module under CracTools::App:: namespace
+- [X] Place binaries buisiness code into Module under CracTools::App:: namespace
       This way we will be able to test all the code properly!
 - [ ] Test cractools-filterN script
 - [ ] Test cractools-extract script
 - [x] Add multi-bam support for cractools-count
+- [x] Figure out why cractools-count does not give the exact same counts
+- [ ] Make CracTools count faster!
+- [ ] Make cractools-count PE aware, to remove eventual ambiguity in counts
