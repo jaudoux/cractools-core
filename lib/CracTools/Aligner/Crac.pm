@@ -4,10 +4,16 @@
 
 =cut
 
-package CracTool::Aligner::Crac;
+package CracTools::Aligner::Crac;
 
 use strict;
 use warnings;
+
+=head2
+
+    
+
+=cut
 
 sub new {
 
