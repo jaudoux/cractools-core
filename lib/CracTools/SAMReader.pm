@@ -120,7 +120,7 @@ use CracTools::SAMReader::SAMline;
             - CRAC_EMT
 
   Example     : $reader = CracTools::SAMreader->new('file.sam','CRAC');
-  Description : Create a new reader obect
+  Description : Create a new reader object
   ReturnType  : CracTools::SAMreader
   Exceptions  : none
 
