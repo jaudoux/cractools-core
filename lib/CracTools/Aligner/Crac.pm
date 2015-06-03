@@ -11,7 +11,7 @@ use warnings;
 use File::Temp;
 use Carp;
 use Data::Dumper;
-use CracTools::Const 'MAPPER';
+use CracTools::Const;
 
 sub new {
 

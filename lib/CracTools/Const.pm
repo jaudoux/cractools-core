@@ -81,7 +81,7 @@ package CracTools::Const;
 
 use strict;
 use warnings;
-use Exporterqw(import);
+use Exporter qw(import);;
 
 =over
 
@@ -100,10 +100,9 @@ our $NOT_AVAILABLE = 'N/A';
 =back
 
 =cut
-    
-use constant MAPPER  => '/data/projects/crac-dev/src/crac';
-use constant INDEX   => '-i /data/indexes/crac/GRCh38';
-use constant KMERS   => '-k 20';
-use constant OPTIONS => '--detailed-sam';
+
+our $CRAC_BINARY = "/data/projects/crac-dev/src/crac";
+our $INDEX_DEFAULT = "/data/indexes/crac/GRCh38";
+
 
 1;
