@@ -9,6 +9,10 @@ use Carp;
 
 use parent 'CracTools::Interval::Query';
 
+=head1 TODO
+
+Add an otpion that gives an method wich can parsed the return line.
+
 =head2 new
 
   Arg [file] : String - file path
