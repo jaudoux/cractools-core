@@ -27,6 +27,7 @@ use constant MIN_GAP_LENGTH => 0;
   --man                  Open man page
   -p=INT                 Number of process to run (default:1)
   --splices=file.bed     Extract splices and print them in a bed file.
+  --stranded             Strand specific protocol (default : FALSE)
 
 =head1 TODO
 
@@ -41,9 +42,11 @@ my ($help,
   $mutations_file,
   $chimeras_file,
   $coverless_splices,
+  $is_stranded,
 );
 
 my $nb_process = 1;
+my $is_stranded = 0;
 
 GetOptions(
   "v|verbose"         => \$verbose,
@@ -52,6 +55,7 @@ GetOptions(
   "c|chimeras=s"      => \$chimeras_file,
   "coverless-splices" => \$coverless_splices,
   "p=i"               => \$nb_process,
+  "stranded"          => \$is_stranded,
   "man"               => \$man,
   "help"              => \$help,
 ) or pod2usage(-verbose => 1);
@@ -62,7 +66,6 @@ pod2usage(-verbose => 2)  if ($man);
 my $bam_file = shift @ARGV;
 pod2usage(-verbose => 1)  unless defined $bam_file;
 my @regions = @ARGV;
-my $is_stranded = 0;
 my $min_gap_length = MIN_GAP_LENGTH;
 
 if(@regions == 0) {
