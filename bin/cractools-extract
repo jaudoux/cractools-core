@@ -46,7 +46,7 @@ my ($help,
 );
 
 my $nb_process = 1;
-my $is_stranded = 0;
+$is_stranded = 0;
 
 GetOptions(
   "v|verbose"         => \$verbose,
