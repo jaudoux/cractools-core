@@ -1,16 +1,13 @@
-=head1
-
-    Crac Wrapper
-
-=cut
-
 package CracTools::Aligner::Crac;
-use CracTools::SAMReader;
+# ABSTRACT: CRAC Wrapper: run CRAC and retrieve alignements
+
 use strict;
 use warnings;
-use File::Temp;
+
 use Carp;
 use Data::Dumper;
+use File::Temp;
+use CracTools::SAMReader;
 use CracTools::Const;
 
 sub new {
