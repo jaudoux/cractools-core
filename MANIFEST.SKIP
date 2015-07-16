@@ -9,7 +9,11 @@
 ^R-report
 install_local.sh
 ^test/
+^test
 ^extra/
 \.cfg$
 ^TODO
 MANIFEST.SKIP
+
+# temprary skipped
+bin/cractools-filtern

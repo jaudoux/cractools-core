@@ -25,10 +25,16 @@ sub new {
   my $self = bless {
     feature_type => $args{feature_type},
     is_stranded => $args{is_stranded},
+    no_ambiguity => $args{no_ambiguity},
     annotator => $annotator,
   }, $class;
 
   return $self;
+}
+
+sub noAmbiguity {
+  my $self = shift;
+  return $self->{no_ambiguity};
 }
 
 sub isStranded {
@@ -55,32 +61,89 @@ sub getCounts {
   my $bam_it = CracTools::Utils::bamFileIterator($bam_file,"");
 
   my %counts;
-  my $prev_pos = 0;
-  my $prev_cigar = "";
+  #my $prev_pos = 0;
+  #my $prev_cigar = "";
+  my $prev_min_candidate_end_pos = 0;
+  my $prev_is_splitted = 0;
   my @prev_candidates = ();
 
+  my $nb_auto_count = 0;
+  my $nb_reads = 0;
+  my $nb_no_candidate = 0;
+  my $nb_ambiguity = 0;
+  my $nb_split = 0;
+
+  # TODO Integrate PE support in order to choose the best candidate using informations
+  # of the pairs.
+
   while(my $line = $bam_it->()) {
+    $nb_reads++;
+    chomp $line;
     # We parse the sam line with a lightweigh method
     my $sam_line = CracTools::Utils::parseSAMLineLite($line);
-    if($prev_pos == $sam_line->{pos} && $prev_cigar eq $sam_line->{original_cigar}) {
+    #print STDERR $sam_line->{qname},"\n";
+
+    my $is_splitted_read = $sam_line->{original_cigar} =~ 'N'; 
+    my $last_read_pos = $sam_line->{pos};
+    grep {$last_read_pos += $_->{nb} if $_->{op} !~ /[SHI]/} @{$sam_line->{cigar}};
+    #print STDERR "last_read_pos: $last_read_pos\n";
+
+    # Next if secondary alignement
+    next if $sam_line->{flag} & 256;
+    next if $sam_line->{flag} & 2048;
+
+    # remove CRAC Not unique
+    #next if "XU:i:0" ~~ @{$sam_line->{extend_fields}};
+    # remove OTHERS not unique
+    next unless "NH:i:1" ~~ @{$sam_line->{extended_fields}};
+
+    # TODO we could do better (for a faster counting procedure);
+    # - If aligment is not split (no N's) 
+    # - and the last mapped pos is < to en feature end that we have previously
+    #   counted
+    #if($prev_pos == $sam_line->{pos} && $prev_cigar eq $sam_line->{original_cigar}) {
+    if(!$prev_is_splitted && !$is_splitted_read && $last_read_pos <= $prev_min_candidate_end_pos) {
+      #print STDERR "Auto count\n";
       foreach my $cand (@prev_candidates) {
         $counts{$cand}++;
       }
+      $nb_auto_count++;
       # We go to next sam line and avoid the counting process
       next;
     } else {
+      $nb_split++ if $prev_is_splitted || $is_splitted_read;
+      #print STDERR "prev_is_splitted: $prev_is_splitted\n";
+      #print STDERR "Is_splitted read: $is_splitted_read\n";
+      #print STDERR "Last_read_pos: $last_read_pos\n";
+      #print STDERR "prev_min_candidate_end_pos: $prev_min_candidate_end_pos\n";
+
+      #print STDERR $line,"\n";
+      #sleep 1;
+      #print STDERR "We're fucked\n";
       @prev_candidates = ();
-      $prev_pos = $sam_line->{pos};
-      $prev_cigar = $sam_line->{original_cigar};
+      #$prev_pos = $sam_line->{pos};
+      #$prev_cigar = $sam_line->{original_cigar};
+      $prev_is_splitted = $is_splitted_read;
+      $prev_min_candidate_end_pos = 0;
     }
-    #print STDERR "Read: ".$sam_line->{qname}."\n";
 
     # #################
     # 1. Find read chunks and register for each on of them a list of candidates
     # -1 because annotator use a 0-basede coordinate system
     my $low = $sam_line->{pos} - 1;
     my $high = $low;
-    my $strand = $sam_line->{flag} & 16? -1 : 1;
+    my $strand = 1;
+    if($self->isStranded) {
+      # If we are Single-end or the first pair and the flag 16 (revcomp) is set
+      # then we are on reverse strand
+      if($sam_line->{flag} & 64 && $sam_line->{flag} & 16) {
+        $strand = -1;
+      # If we are on the second pair and the flag 16 is NOT set
+      # then we are also on the reverse strand
+      } elsif($sam_line->{flag} & 128 && !($sam_line->{flag} & 16)) {
+        $strand = -1;
+      }
+    }
     # This table will hold the candidates for each chunk of the read
     my @candidates;
     my $nb_chunk = 0;
@@ -161,8 +224,24 @@ sub getCounts {
     my %counted_candidates;
     my %selected_candidates;
     if(@candidates < 2) {
-      foreach my $first_chunk_cand (@{$candidates[0]}) {
-        $selected_candidates{$first_chunk_cand->{$self->featureType}->attribute('ID')} = $first_chunk_cand->{$self->featureType};
+      # There is a ambiguity for this chunk (if no_ambiguity is set
+      if(!$self->noAmbiguity || @{$candidates[0]} == 1) {
+        my $min_end_pos;
+        foreach my $first_chunk_cand (@{$candidates[0]}) {
+          $min_end_pos = $first_chunk_cand->{$self->featureType}->end if !defined $min_end_pos || $first_chunk_cand->{$self->featureType}->end < $min_end_pos;
+          $selected_candidates{$first_chunk_cand->{$self->featureType}->attribute('ID')} = $first_chunk_cand->{$self->featureType};
+        }
+        if(defined $min_end_pos) {
+          $prev_min_candidate_end_pos = $min_end_pos;
+        } else {
+          #print STDERR "No candidates found\n";
+          $nb_no_candidate++;
+          $prev_min_candidate_end_pos = 0;
+        }
+      } else {
+        #print STDERR "Ambiguity in candidates\n";
+        $nb_ambiguity++;
+        $prev_min_candidate_end_pos = 0;
       }
     }
     # We loop over all chunk candidates to find the best annotation feater
@@ -204,20 +283,23 @@ sub getCounts {
           }
         }
       }
-      # If we have something in the current selection; that means that we have
-      # found a good candidate(s)
-      if(%current_selection && (!defined $min_dist || $current_min_dist == $min_dist)) {
-        # We merge candidate hashes
-        @selected_candidates{keys %current_selection} = values %current_selection;
-        $min_dist = $current_min_dist;
-      # If we do not, we need to count the read for the prev candidate(s)
-      # and continue for next chunks to come
-      } else {
-        foreach my $candidate (keys %selected_candidates) {
-          $counted_candidates{$candidate} = 1;
+      # There is a ambiguity for this chunk (if no_ambiguity is set
+      if(!$self->noAmbiguity || keys %current_selection == 1) {
+        # If we have something in the current selection; that means that we have
+        # found a good candidate(s)
+        if(%current_selection && (!defined $min_dist || $current_min_dist == $min_dist)) {
+          # We merge candidate hashes
+          @selected_candidates{keys %current_selection} = values %current_selection;
+          $min_dist = $current_min_dist;
+        # If we do not, we need to count the read for the prev candidate(s)
+        # and continue for next chunks to come
+        } else {
+          foreach my $candidate (keys %selected_candidates) {
+            $counted_candidates{$candidate} = 1;
+          }
+          %selected_candidates = %current_selection;
+          $min_dist = $current_min_dist;
         }
-        %selected_candidates = %current_selection;
-        $min_dist = $current_min_dist;
       }
     }
     # We add to the count table what's left
@@ -232,6 +314,12 @@ sub getCounts {
     }
   }
 
+  print STDERR "NB_AUTO_COUNTS: $nb_auto_count\n";
+  print STDERR "NB_READS: $nb_reads\n";
+  print STDERR "NB_AMBIGUITY: $nb_ambiguity\n";
+  print STDERR "NO_CANDIDATE: $nb_no_candidate\n";
+  print STDERR "NO_SPLIT: $nb_split\n";
+
   return \%counts;
 }
 
@@ -242,7 +330,14 @@ sub getReadChunkCandidates {
   my @candidates;
   my $is_included = 0;
   if($self->isStranded && defined $strand) {
-    # TODO
+    my ($best_candidates) = $annotator->getBestAnnotationCandidates($chr,
+        $start,
+        $end,
+        $strand,
+        \&prioritySub, 
+        $compareSub,
+    );
+    push @potential_candidates, @{$best_candidates};
   } else {
     foreach my $query_strand ((1,-1)) {
       my ($best_candidates) = $annotator->getBestAnnotationCandidates($chr,

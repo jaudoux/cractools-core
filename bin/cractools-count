@@ -19,6 +19,8 @@ use Parallel::ForkManager 0.7.6;
 
 =head1 OPTIONS
 
+  --stranded             Strand-specific protocol
+  --no-ambiguity         Remove ambiguiuous counts
   --help                 Print this help
   --man                  Open man page
   -f                     Feature type to count
@@ -42,6 +44,7 @@ my ($help,
 my $nb_process = 1;
 my $feature_type = "exon";
 my $is_stranded = 0;
+my $no_ambiguity = 0;
 
 GetOptions(
   "v|verbose"         => \$verbose,
@@ -50,6 +53,7 @@ GetOptions(
   "help"              => \$help,
   "f=s"               => \$feature_type,
   "stranded"          => \$is_stranded,
+  "no-ambiguity"      => \$no_ambiguity,
 ) or pod2usage(-verbose => 1);
 
 # TODO implement is_stranded 
@@ -67,6 +71,7 @@ my $counter = CracTools::App::Count->new(
   feature_type => $feature_type, 
   is_stranded => $is_stranded,
   gff_file => $annot_file,
+  no_ambiguity => $no_ambiguity,
 );
 
 # Create Fork pool

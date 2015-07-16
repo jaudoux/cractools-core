@@ -62,12 +62,12 @@ use File::Temp;
 # T3 : +----+        +----+        +------+
 #      | E1 |--------| E2 |--------|  E3b |
 #      +----+        +----+        +------+
-# read1  ###                              
-# read2   ####                            
-# read3     ####---------------------###
-# read4  ####--------#####---------###
-# read5  ####-------------------------###
-# read6               #####------####
+# read1  ###                                E1,E1b,T1,T2,T3,G1
+# read2   ####                              E1b,T2,G1
+# read3     ####---------------------###    E1b,E3,T2,G1
+# read4  ####--------#####---------###      E1,E2,E3b,T3,G1
+# read5  ####-------------------------###   E1,E3,T1,G1
+# read6               #####------####       E4,E5,T4,G2
 
 
 __GFF__
@@ -85,9 +85,9 @@ __GFF__
 1	line1	mRNA	10	32	.	+	0	ID=T4;Parent=G2
 1	line1	gene	10	32	.	+	0	ID=G2
 __SAM__
-read1	0	1	3	255	2S3M
-read2	0	1	4	255	4M5H
-read3	0	1	6	255	4M21N3M
-read4	0	1	3	255	4M8N5M9N3M
-read5	0	1	3	255	4M25N3M
-read6	0	1	16	255	5M6N4M
+read1	0	1	3	255	2S3M	*	0	0	ATGCT	NNNNN	NH:i:1
+read4	0	1	3	255	4M8N5M9N3M	*	0	0	NNNNNNNNNNNN	NNNNNNNNNNNN	NH:i:1
+read5	0	1	3	255	4M25N3M	*	0	0	NNNNNNN	NNNNNNN	NH:i:1
+read2	0	1	4	255	4M5H	*	0	0	NNNNNNNNN	NNNNNNNNN	NH:i:1
+read3	0	1	6	255	4M21N3M	*	0	0	NNNNNNN	NNNNNNN	NH:i:1
+read6	0	1	16	255	5M6N4M	*	0	0	NNNNNNNNN	NNNNNNNNN	NH:i:1
