@@ -19,19 +19,22 @@ use constant MIN_GAP_LENGTH => 0;
 
 =head1 SYNOPSIS
 
-  cractools extract file.bam [regions] [--splices splice.bed] [--mutations file.vcf] [--chimeras chimeras.tsv]
+  cractools extract file.bam [regions] [-p nb_threads] [--splices splice.bed] [--mutations file.vcf] [--chimeras chimeras.tsv]
 
 =head1 OPTIONS
 
   --help                 Print this help
   --man                  Open man page
   -p=INT                 Number of process to run (default:1)
-  --splices=file.bed     Extract splices and print them in a bed file.
+  --splices=<FILE>       Extract splices and print them in a bed file.
+  --mutations=<FILE>     Extract mutations (SNVs and InDels) and print them in a vcf file.
+  --chimeras=<FILE>      Extract chimeric junctions and print them in a tabulated file.
   --stranded             Strand specific protocol (default : FALSE)
 
 =head1 TODO
 
 We should only consider uniquely aligned reads
+We should provide --rf,--fr,--ff options for stranded protocols
 
 =cut  
 
