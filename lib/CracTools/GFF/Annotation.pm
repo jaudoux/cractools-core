@@ -1,9 +1,13 @@
 package CracTools::GFF::Annotation;
 # ABSTRACT: Parse GFF lines.
 
-=head1 SYNOPSIS
+use strict;
+use warnings;
 
-Usage:
+use Carp;
+use CracTools::Utils;
+
+=head1 SYNOPSIS
 
   use CracTools::GFF::Query;
 
@@ -19,16 +23,11 @@ Usage:
 
 =head1 DESCRIPTION
 
-CracTools::GFF::Annotataion is an object to parse and access GFF line's fields.
+This module defines an object to easily parse and access GFF line's fields.
 
 =head1 TODO
 
 Set Parent for feature in GTF format (gene_id for transcript and transcript_id for exons).
-
-=cut
-
-
-use Carp;
 
 =head1 METHODS
 
@@ -44,7 +43,6 @@ use Carp;
                 If a gff line is passed in argument, the line will be parsed
                 and loaded.
   ReturnType  : CracTools::GFF::Query
-  Exceptions  : none
 
 =cut
 
@@ -72,7 +70,7 @@ sub _init {
   my ($chr,$source,$feature,$start,$end,$score,$strand,$phase,$attributes) = split("\t",$line);
 
   # Get the strand if 1/-1 format
-  $strand = convertStrand($strand);
+  $strand = CracTools::Utils::convertStrand($strand);
 
   # We do not want any "chr" string before the reference sequence value
   $chr =~ s/^chr//;
@@ -229,7 +227,7 @@ sub strand {
 
 sub gffStrand {
   my $self = shift;
-  return convertStrand($self->{strand});
+  return CracTools::Utils::convertStrand($self->{strand});
 }
 
 =head2 phase
@@ -281,22 +279,6 @@ sub attribute {
     return undef;
     #croak ("Missing attribute key to retreive attribute value");
   }
-}
-
-=head1 STATIC METHODS
-
-=head2 convertStrand
-  
-  Arg [1] : Character - strand using '+' and '-' signs
-
-  Description : Retrun the strand using the (1,-1) convention
-                instead of the ('+','-') convention of GFF files.
-=cut
-
-sub convertStrand($) {
-  my $strand = shift;
-  my %conversion_hash = ( '+' => 1, '-' => -1, 1 => '+', -1 => '-');
-  return $conversion_hash{$strand};
 }
 
 1;

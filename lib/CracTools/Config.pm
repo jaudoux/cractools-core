@@ -13,6 +13,33 @@ use Carp;
 
 use CracTools;
 
+=head1 SYNOPSIS
+
+  use CracTools::Config;
+
+  # Open the configuration file
+  CracTools::Config::LoadConfig($config_file);
+
+  # Retrieve some variable
+  $gff_file = CracTools::Config::getConfVar('ANNOTATION_GFF');
+
+=head1 DESCRIPTION
+
+This module aims to integrate a common configuration file among all the
+cractools pipelines. It automatically load the configuration file by looking to
+diverse locations, then it provides methods to retrieved the variables declared
+in the configuration file.
+
+The configuration file name is C<CracTools.cfg>, and the space search is the
+current director, the home dir, local configurations (/usr/loacl/etc)
+and default configurations (/etc/).
+
+=head1 SEE ALSO
+
+This module is based on L<Config::FileManager>.
+
+=cut
+
 require Exporter;
 our @ISA = qw(Exporter);
 
@@ -44,11 +71,9 @@ $cfg->defaultContent($default_content);
 
 =head2 PrintVersion
 
-Print (in an uniformized way) the version information of the CracUtil script.
-
-Usage:
-
-  PrintVersion();
+  Example     : CracTools::Config::PrintVersion();
+  Description : Print (in an uniformized way) the version information of the CracTool script.
+  ReturnType  : undef
 
 =cut
 
@@ -61,10 +86,10 @@ sub PrintVersion() {
 
 =head2 LoadConfig
 
-Usage:
-
-  my $default_cfg = LoadConfig(); # Use (and get) default config file (see L<Config::FileManager>)
-  LoadConfig("your_file.conf");
+  Example     : my $default_cfg = LoadConfig(); # Use (and get) default config file (see L<Config::FileManager>)
+                LoadConfig("your_file.conf");
+  Description : Load the default configuration file.
+  ReturnType  : undef
 
 =cut
 
@@ -80,9 +105,12 @@ sub LoadConfig(;$) {
 
 =head2 getConfVar
 
-Usage:
+  Arg [1] : String - variable name
 
-  my $var = getConfVar("GENOME"); 
+  Example     : my $var = getConfVar("GENOME"); 
+  Description : Return the variable value found in the
+                configuration file
+  ReturnType  : String
 
 =cut
 

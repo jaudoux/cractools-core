@@ -314,11 +314,11 @@ sub getCounts {
     }
   }
 
-  print STDERR "NB_AUTO_COUNTS: $nb_auto_count\n";
-  print STDERR "NB_READS: $nb_reads\n";
-  print STDERR "NB_AMBIGUITY: $nb_ambiguity\n";
-  print STDERR "NO_CANDIDATE: $nb_no_candidate\n";
-  print STDERR "NO_SPLIT: $nb_split\n";
+  #print STDERR "NB_AUTO_COUNTS: $nb_auto_count\n";
+  #print STDERR "NB_READS: $nb_reads\n";
+  #print STDERR "NB_AMBIGUITY: $nb_ambiguity\n";
+  #print STDERR "NO_CANDIDATE: $nb_no_candidate\n";
+  #print STDERR "NO_SPLIT: $nb_split\n";
 
   return \%counts;
 }

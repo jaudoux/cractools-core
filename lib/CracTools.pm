@@ -8,7 +8,7 @@ our $PACKAGE_NAME = "CracTools";
 CracTools-core is the cornerstone of the CracTools. It is a toolbox that aim to
 ease the build of pipelines in the field of bioinformatics. It has been
 originally built to produce pipelines on top of
-[CRAC](http://crac.gforge.inria.fr/) software, but you can use the
+L<CRAC|http://crac.gforge.inria.fr/> software, but you can use the
 CracTools-core tools in an other context.  It has a lot of built-in features to
 parse file, intersect biological events, integrate annotation, sharing
 configuration.
@@ -52,11 +52,11 @@ Is a module to parse and access GFF3 file.
 =head3 L<CracTools::Interval::Query>
 
 Is a module to store and query variables associated with genomic intervals. It
-is based on the interval tree datastructure provided by `Set::IntervalTree`.
+is based on the interval tree datastructure provided by L<Set::IntervalTree>.
 
 =head3 L<CracTools::Interval::Query::File>
 
-Acts like `CracTools::Interval::Query` but read interval from files and return
+Acts like L<CracTools::Interval::Query> but read interval from files and return
 lines of the file matching the query. It has built-in methods to parse, SAM,
 G{T|F}F, BED, VCF files but you can provide your own method for other file
 formats.
@@ -71,7 +71,7 @@ to query this mask. It can read genome sequence and length from various sources
 
 =head3 L<CracTools::Annotator>
 
-Is a module based on `CracTools::Interval::Query::File` that provides powerfull
+Is a module based on L<CracTools::Interval::Query::File> that provides powerfull
 methods to query annotation files and prioritize hits to fit specific
 application needs.
 

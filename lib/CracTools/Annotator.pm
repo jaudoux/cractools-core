@@ -5,32 +5,104 @@ use strict;
 use warnings;
 
 use Carp;
+use List::Util qw[min max];
+
+use CracTools::Const;
 use CracTools::GFF::Annotation;
 use CracTools::Interval::Query;
 use CracTools::Interval::Query::File;
-use List::Util qw[min max];
-use CracTools::Const;
 
-=head1 SYNOPSYS
+=head1 SYNOPSIS
+  
+  # Construct tha annotator object that will index the GFF file in
+  # a genomic interal-tree based structure
+  my $annotator = CracTools::Annotator->new("annotation.gff");
 
-0-based coordinate system
-closed [a,b] intervals
+  # Query the annotator object for overlapping annotations
+  my $annot = $annotator->getBestAnnotationCandidate("chr1",12345,12380);
+
+  if(defined $annot->{exon}) {
+    print STDERR "Found overlapping exon\n";
+  } else {
+    # If no overlapping exons have been found, we check for the closest gene
+    # in the downstream direction
+    my $closest_annot = $annotator->getAnnotationNearestDownCandidates()->[0];
+    if(defined $closest_annot && defined $closest_annot->{gene}) {
+      print STDERR "Closest gene annotation is ".12345 - $closest_annot->{gene}->end."bp away\n";
+    }
+  }
+
+=head1 DESCRIPTION
+
+Is a module based on L<CracTools::Interval::Query::File> that provides powerfull
+methods to query annotation files and prioritize hits to fit specific
+application needs.
+
+Annotator work with 0-based coordinate system and closed [a,b] intervals.
+
+The principle behind L<CracTools::Annotator> is to build a genomic interval
+tree that holds the annotations. Then, the user can query this datastructure to
+retrieve annotations. In order to organized the retrieved annotations, we
+build candidates hashes that are a branch of the annotation tree. For a classic
+GFF annotation file, if the queried interval overlap and exon, the branch of the
+annotation tree, will go from an exon leaf up to the gene root passing by an mRNA internal node.
+
+=head2 Candidate structure
+
+An annotation candidate is a hash datastructure, where keys are GFF features (exon, gene, mRNA)
+and values are L<CracTools::GFF::Annotation> object (a parsed GFF line).
+
+It also contains an entry C<parent_feature> that holds the parenting links
+between features, and an entry C<leaf_feature> that holds the feature name of
+the leaf ("exon" for example).
+
+  my $candidate = {
+    "exon" => CracTools::GFF::Annotation, 
+    "gene" => CracTools::GFF::Annotation,
+    "feature" => CracTools::GFF::Annotation, ..., 
+    parent_feature => {exon => mRNA, featureA => featureB, ...},
+    leaf_feature => "exon",
+  };
+
+=head2 Priority methods
+
+Each annotation query can be parametrized with priorization methods that will
+choose a set of "best" annotation(s) to be returned to the user. In this module
+we propose default priorization method, but you can create your own in order to 
+fit your application needs.
+
+There is two kind of priorization method, C<prioritySub> and C<comparSub>.
+
+=head3 Priority subroutine
+
+The priority subroutine (by default L</"getCandidatePriorityDefault">) recieve
+as input the queried interval (start and end pos) and an annotation candidate.
+As output the subroutine must return a priority level (the lower being more
+important), and a string variable that is a literal version of the priority
+level.
+
+=head3 Compare subroutine
+
+The compare subroutine (by default L</"compareTwoCandidatesDefault">) recieve as
+input two annotation candidates and the queried interval.
+As output the subroutine must return the best candidate between the two, or
+neither (undef) if the subroutine cannot determine.
+
 
 =head1 METHODS
 
 =head2 new
 
   Arg [1] : String - $gff_file
-            GFF file to perform annotation
+            GFF file used to perform annotation
   Arg [2] : String - $mode
-            "fast", "light"
+            Execution mode : "fast" or "light" ("light" by default)
 
-  Example     : my $annotation = CracTools::GFF::Annotation->new($gff_line);
-  Description : Create a new CracTools::GFF::Annotation object
-                If a gff line is passed in argument, the line will be parsed
-                and loaded.
-  ReturnType  : CracTools::GFF::Query
-  Exceptions  : none
+  Example     : my $annotator = CracTools::GFF::Annotator->new($gff_file);
+  Description : Create a new CracTools::GFF::Annotator object based on the
+                provided GFF file. If "light" mode is specified, CracTools::Annotator
+                will be less memory consuming but will have a time execution overhead.
+  ReturnType  : CracTools::GFF::Annotator
 
 =cut
 
@@ -57,11 +129,33 @@ sub new {
 
 =head2 mode 
 
+  Description : Return the mode used to create the annotator
+  ReturnType  : string ("light" or "fast")
+
 =cut 
 
 sub mode {
   my $self = shift;
   return $self->{mode};
+}
+
+=head2 foundAnnotation
+
+  Arg [1] : String - chr
+  Arg [2] : String - pos_start
+  Arg [3] : String - pos_end
+  Arg [4] : String - strand
+
+  Description : Return true if any overlapping annotation has been found
+  ReturnType  : Boolean
+
+=cut
+
+sub foundAnnotation {
+  my $self = shift;
+  my ($chr,$pos_start,$pos_end,$strand) = @_;
+  my @candidates = @{ $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand)};
+  return (scalar @candidates > 0);
 }
 
 =head2 foundGene
@@ -71,9 +165,8 @@ sub mode {
   Arg [3] : String - pos_end
   Arg [4] : String - strand
 
-  Description : Return true if there is an exon of a gene is this interval
+  Description : Return true if an overlapping gene annotation has been found
   ReturnType  : Boolean
-  Exceptions  : none
 
 =cut
 
@@ -81,7 +174,10 @@ sub foundGene {
   my $self = shift;
   my ($chr,$pos_start,$pos_end,$strand) = @_;
   my @candidates = @{ $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand)};
-  return (scalar @candidates > 0);
+  foreach my $candidate (@candidates) {
+    return 1 if defined $candidate->{gene};
+  }
+  return 0;
 }
 
 =head2 foundSameGene
@@ -93,9 +189,8 @@ sub foundGene {
   Arg [5] : String - pos_end1
   Arg [6] : String - strand
 
-  Description : Return true if a gene is the same gene is found is the two intervals.
+  Description : Return true if a same gene overlaps the two intervals.
   ReturnType  : Boolean
-  Exceptions  : none
 
 =cut
 
@@ -139,8 +234,8 @@ sub foundSameGene {
   Arg [6] : (Optional) Subroutine - see C<compareTwoCandidatesDefault> for more details
 
   Description : Return best annotation candidate according to the priorities given
-                by the subroutine in argument.
-  ReturnType  : Hash( feature_name => CracTools::GFF::Annotation, ...), Int(priority), String(type)
+                by the subroutine(s) in argument.
+  ReturnType  : AnnotationCandidate, Int(priority), String(type)
 
 =cut
 
@@ -165,7 +260,7 @@ sub getBestAnnotationCandidate {
 
   Description : Return best annotation candidates according to the priorities given
                 by the subroutine(s) in argument.
-  ReturnType  : ArrayRef[HashRef{ feature_name => CracTools::GFF::Annotation, ...}, ...], Int(priority), String(type)
+  ReturnType  : ArrayRef of AnnotationCandidates, Int(priority), String(type)
 
 =cut
 
@@ -236,7 +331,7 @@ sub getBestAnnotationCandidates {
 
   Description : Return an array with all annotation candidates overlapping the
                 chromosomic region.
-  ReturnType  : Array of Hash( feature_name => CracTools::GFF::Annotation, ...)
+  ReturnType  : ArrayRef of AnnotationCandidate
 
 =cut
 
@@ -260,7 +355,7 @@ sub getAnnotationCandidates {
 
   Description : Return an array with all annotation candidates nearest down the
                 query region (without overlap).
-  ReturnType  : Array of Hash( feature_name => CracTools::GFF::Annotation, ...)
+  ReturnType  : ArrayRef of AnnotationCandidate
 
 =cut
 
@@ -289,7 +384,7 @@ sub getAnnotationNearestDownCandidates {
 
   Description : Return an array with all annotation candidates nearest up the
                 query region (without overlap).
-  ReturnType  : ArrayRef of HashRef{ feature_name => CracTools::GFF::Annotation, ...}
+  ReturnType  : ArrayRef of AnnotationCandidate
 
 =cut
 
@@ -321,7 +416,7 @@ sub getAnnotationNearestUpCandidates {
                 for selecting the best annotation.
                 The best priority is 0. A priority of -1 means that this candidate
                 should be avoided.
-  ReturnType  : Array ($priority,$type) where $priority is an integer and $type a string
+  ReturnType  : Array($priority,$type) where $priority is an integer and $type a string
 
 =cut
 
@@ -373,7 +468,7 @@ sub getCandidatePriorityDefault {
   Description : Default method used to chose the best candidat when priority are equals
                 You can create your own priority method to fit your specific need
                 for selecting the best candidat.
-  ReturnType  : hash - best candidat or undef if we cannot decide which candidate is the best
+  ReturnType  : AnnotationCandidate - best candidate or undef if we cannot decide which candidate is the best
 
 =cut
 sub compareTwoCandidatesDefault{
@@ -400,9 +495,6 @@ sub compareTwoCandidatesDefault{
   # If nothing has worked we return "undef"
   return undef;
 }
-
-
-
 
 =head1 PRIVATE METHODS
 

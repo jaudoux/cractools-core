@@ -3,7 +3,19 @@ package CracTools::Const;
 
 use strict;
 use warnings;
-use Exporter qw(import);;
+use Exporter qw(import);
+
+=head1 SYNOPSIS
+
+  # get a constant variable
+  my $NA = $CracTools::Const::NOT_AVAILABLE;
+
+=head1 DESCRIPTION
+
+This module contains some constants that are defined for all the
+CracTools pipelines.
+
+=head1 CONSTANTS
 
 =over
 
@@ -13,18 +25,10 @@ use Exporter qw(import);;
 
 =cut
 
-our $NOT_AVAILABLE = 'N/A';
+our $NOT_AVAILABLE = 'NA';
 
 =over
 
-=item CRAC parameters 
-
-=back
-
 =cut
-
-our $CRAC_BINARY = "/data/projects/crac-dev/src/crac";
-our $INDEX_DEFAULT = "/data/indexes/crac/GRCh38";
-
 
 1;

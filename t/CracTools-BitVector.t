@@ -1,21 +1,26 @@
 #! /usr/bin/perl
 
-use Test::More tests => 11;
+use Test::More tests => 17;
 use CracTools::BitVector;
 
 my $bv = CracTools::BitVector->new(10);
 
 # Length
-is($bv->length(),10);
+is($bv->length(),10, "length");
 
 # Nb_set
-is($bv->nb_set(),0);
+is($bv->nb_set(),0, "nbSet (1)");
 
 $bv->set(2);
 $bv->set(5);
 
-#0010010100
+is($bv->firstBitSet,2,"firstBitSet");
 
+#0010010000
+is($bv->to_string(''),"0010010000","to_string (1)");
+
+# Nb_set
+is($bv->nb_set(),2, "nbSet (2)");
 
 is($bv->nb_set(),2);
 
@@ -35,6 +40,13 @@ $bv->set(7);
 is($bv->succ(3),7);
 
 #0010000100
+is($bv->to_string(''),"0010000100","to_string (2)");
+
+# copy
+my $bv_copy = $bv->copy;
+$bv_copy->set(1);
+is($bv->to_string(''),"0010000100","copy (1)");
+is($bv_copy->to_string(''),"0110000100","copy (2)");
 
 # rank
 is($bv->rank(5),1);

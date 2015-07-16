@@ -8,17 +8,41 @@ use strict;
 use POSIX qw(floor ceil);
 use constant BITNESS => 64;
 
-# use overload 
-#     q{=} => 'copy';
-#     q{""} => 'to_string',
-#     '*' => 'mult',
-#     '/' => 'divide',
-#     '+' => 'add',
-#     '.' => 'multElemPerElem',
-#     '-' => 'minus';
+=head1 SYNOPSIS
 
-# BitVector Constructor
-# 1 parameter: length of the vector
+  my $bv = CracTools::BitVector->new(1000);
+
+  # Setting bits
+  my $bv->set(1);
+  my $bv->set(12);
+
+  # Query bits
+  if($bv->get(12)) {
+    print STDERR "I knew this one was set!!\n";
+  }
+
+=head1 DESCRIPTION
+
+This module based implements a bitvector datastructure where individual bits
+can be set, unset and check. It also implement "rank", "select" functions, but
+it is poorly optimised. 
+
+=head1 SEE ALSO
+
+You may want to check L<CracTools::GenomeMask> that uses this BitVector
+implementation to define a complete bitset over a genome.
+
+=head1 METHODS
+
+=head2 new
+
+  Arg [1] : Integer - lenght of the bitvector
+
+  Description : Return a new CracTools::BitVector object
+  ReturnType  : CracTools::BitVector
+
+=cut
+
 sub new {
     my ($class, $length)  = @_;
     my $this = {};
@@ -41,10 +65,24 @@ sub new {
     return $this;
 }
 
+=head2 firstBitSet
+
+  Description : Return the position of the first bit set
+  ReturnType  : Integer
+
+=cut
+
 sub firstBitSet {
   my $self = shift;
   return $self->{first_bit_set};
 }
+
+=head2 copy
+
+  Description : Return a copy of the curent bitvector
+  ReturnType  : CracTools::BitVector
+
+=cut
 
 sub copy {
     my ($this) = @_;
@@ -60,9 +98,15 @@ sub copy {
     return $new;
 }
 
-# Set a 1-bit at position i 
-# @param i: position in the bit vector
-# @post get($i) == 1
+=head2 set
+
+  Arg [1] : Integer - position in the bitvector
+
+  Description : Set 1-bit at position i
+  ReturnType  : undef
+
+=cut
+
 sub set {
     my ($this, $i) = @_;
     $this->{first_bit_set} = $i if $i < $this->{first_bit_set};
@@ -73,9 +117,15 @@ sub set {
     }
 }
 
-# Unset a 1-bit at position i 
-# @param i: position in the bit vector
-# @post get($i) == 0
+=head2 unset
+
+  Arg [1] : Integer - position in the bitvector
+
+  Description : Unset 1-bit at position i
+  ReturnType  : undef
+
+=cut
+
 sub unset {
     my ($this, $i) = @_;
     if ($this->get($i)) {
@@ -85,8 +135,15 @@ sub unset {
     }
 }
 
-# @param i position in the bit vector
-# @return the value of the bit at position i
+=head2 get
+
+  Arg [1] : Integer - position in the bitvector
+
+  Description : Return the value of the bit at position i
+  ReturnType  : Boolean
+
+=cut
+
 sub get {
     my ($this, $i) = @_;
     if (! defined($this) || ! defined($this->{bits})
@@ -96,13 +153,20 @@ sub get {
     return ($this->{bits}[int($i / BITNESS)] & (1 << ($i % BITNESS)))? 1 : 0;
 }
 
-# @param i position in the bit vector
-# @param max (optional) maximal shift from i
-# @return The previous position that has a bit set.
-#         ie. a position j <= i such that get(j) == 1
-#         && get(k) == 0 , j < k <= i
-#         If max is set, j >= i - max
-#         -1 if no such position exists
+=head2 prev
+
+  Arg [1] : Integer - position in the bitvector
+  Arg [2] : (Optional) Integer - max shift from i
+
+  Description : Return the previous position that has a bit set.
+                ie. a position j <= i such that get(j) == 1
+                && get(k) == 0 , j < k <= i
+                If max is set, j >= i - max
+                -1 if no such position exists
+  ReturnType  : Integer
+
+=cut
+
 sub prev {
     my ($this, $i, $max) = @_;
     my $start = $i;
@@ -143,13 +207,20 @@ sub prev {
     }
 }
 
-# @param i position in the bit vector
-# @param max (optional) maximal shift from i
-# @return The next position that has a bit set.
-#         ie. a position j >= i such that get(j) == 1
-#         && get(k) == 0 , j > k >= i
-#         If max is set, j <= i + max
-#         -1 if no such position exists
+=head2 succ
+
+  Arg [1] : Integer - position in the bitvector
+  Arg [2] : (Optional) Integer - max shift from i
+
+  Description : Return the next position that has a bit set.
+                ie. a position j >= i such that get(j) == 1
+                && get(k) == 0 , j > k >= i
+                If max is set, j <= i + max
+                -1 if no such position exists
+  ReturnType  : Integer
+
+=cut
+
 sub succ {
     my ($this, $i, $max) = @_;
     my $start = $i;
@@ -191,12 +262,16 @@ sub succ {
     }
 }
 
-# @param i position in the bit vector
-# @return The next position that has a bit set.
-#         ie. a position j >= i such that get(j) == 1
-#         && get(k) == 0 , j > k >= i
-#         If max is set, j <= i + max
-#         -1 if no such position exists
+=head2 rank
+
+  Arg [1] : Integer - position in the bitvector
+
+  Description : Return the number of bit set up to
+                position i
+  ReturnType  : Integer
+
+=cut
+
 sub rank {
   my ($self, $i) = @_;
   my $rank = $self->get($i)? 1 : 0;
@@ -212,12 +287,19 @@ sub rank {
   return $rank;
 }
 
-# @param i position in the bit vector
-# @return The next position that has a bit set.
-#         ie. a position j >= i such that get(j) == 1
-#         && get(k) == 0 , j > k >= i
-#         If max is set, j <= i + max
-#         -1 if no such position exists
+=head2 select
+
+  Arg [1] : Integer - position in the bitvector
+
+  Description : Return the next position that has a bit set.
+                ie. a position j >= i such that get(j) == 1
+                && get(k) == 0 , j > k >= i
+                If max is set, j <= i + max
+                -1 if no such position exists
+  ReturnType  : Integer
+
+=cut
+
 sub select {
   my ($self, $nb) = @_;
   my $i = $self->firstBitSet;
@@ -228,28 +310,60 @@ sub select {
   return $i;
 }
 
+=head2 length
+  
+  Description : Return the length of the bitvector
+  ReturnType  : Integer
+
+=cut
+
 sub length {
     my ($this) = @_;
     return $this->{n};
 }
 
-sub nb_set {
+=head2 nbSet
+  
+  Description : Return the number of bit set
+  ReturnType  : Integer
+
+=cut
+
+sub nbSet {
     my ($this) = @_;
     return $this->{set};
 }
 
-sub to_string {
+# Retro-compatibility alias
+sub nb_set { my $self = shift; $self->nbSet(@_);}
+
+=head2 toString
+
+  Arg [1] : (Optional) String - Separator character (space by default)
+  
+  Description : Return a string representation of the bitvector
+                where each bit is separated with a space character.
+  ReturnType  : String
+
+=cut
+
+sub toString {
     my $this = shift;
+    my $sep = shift;
     my $output = '';
+
+    $sep = ' ' unless defined $sep;
     
     for (my $i=0; $i < $this->{n}; $i++) {
-
         if ($i % BITNESS == 0 && $i > 0) {
-            $output .= ' ';
+            $output .= $sep;
         }
         $output .= $this->get($i);
     }
     return $output
 }
+
+# Retro-compatibility alias
+sub to_string { my $self = shift; $self->toString(@_);}
 
 1;

@@ -1,6 +1,5 @@
 package CracTools::GenomeMask;
 # ABSTRACT: A bit vector mask over the whole genome
-#
 
 use strict;
 use warnings;
@@ -8,6 +7,25 @@ use warnings;
 use CracTools::BitVector;
 use CracTools::Utils;
 use Carp;
+
+=head1 SYNOPSIS
+
+  my $genome_mask = CracTools::GenomeMask->new( genome => { "chr1" => 100000, "chr2" => 20000 } );
+
+  $genome_mask->setRegion("chr1",200,250);
+
+  $genome_mask->getNbBitsSetInRegion("chr1",190,220);
+
+=head1 DESCRIPTION
+
+This module defines a BitVector mask over a whole genome and provide method
+to query this mask. It can read genome sequence and length from various sources
+(SAM headers, CRAC index, User input).
+
+=head1 SEE ALSO
+
+You can look at L<CracTools::BitVector> that is the underlying datastructure of
+L<CracTools::GenomeMask>.
 
 =head1 METHODS
 
@@ -30,8 +48,10 @@ the header
 
   my $genome_mask = CracTools::GenomeMask->new(sam_reader => CracTools::SAMReader->new(file.sam));
 
-
 =cut
+#You can also define is the genome should be consider as uniquely stranded or as double stranded
+#with the C<is_stranded> argument.
+
 
 sub new {
   my $class = shift;
@@ -39,7 +59,7 @@ sub new {
   my %args = @_;
 
   # the genome mask is not stranded by default
-  my $is_stranded = defined $args{is_stranded}? $args{is_stranded} : 0;
+  #my $is_stranded = defined $args{is_stranded}? $args{is_stranded} : 0;
   my $verbose = defined $args{verbose}? $args{verbose} : 0;
 
   my %bit_vectors;
@@ -83,29 +103,38 @@ sub new {
 
   my $self = bless {
     bit_vectors => \%bit_vectors,
-    is_stranded => $is_stranded,
+    #is_stranded => $is_stranded,
   }, $class;
 
   return $self;
 }
 
-sub isStranded {
-  my $self = shift;
-  return $self->{is_stranded};
-}
+#=head2 isStranded
+#
+#  Description : Return true is genomeMask is double stranded
+#
+#=cut
+#
+#sub isStranded {
+#  my $self = shift;
+#  return $self->{is_stranded};
+#}
 
 =head2 getBitvector
 
-Return the C<CracTools::BitVector> associated with the reference name given in argument.
+  Arg [1] : String - Chromosome
 
-If no bitvectors exists for this reference, a warning will be reported.
+  Description : Return the CracTools::BitVector associated with the reference name given in argument.
+                If no bitvectors exists for this reference, a warning will be reported.
+  ReturnType  : CracTools::BitVector
 
 =cut
+#Arg [2] : Integer (1,-1) - strand
 
 sub getBitvector {
   my $self = shift;
   my $chr = shift;
-  my $strand = shift;
+  #my $strand = shift;
   if(defined $self->{bit_vectors}->{$chr}) {
     return $self->{bit_vectors}->{$chr};
   } else {
@@ -115,6 +144,11 @@ sub getBitvector {
 }
 
 =head2 getChrLength
+
+  Arg [1] : String - Chromosome
+
+  Description : Return the length of the chromosome
+  ReturnType  : Integer
 
 =cut
 
@@ -127,9 +161,10 @@ sub getChrLength {
 
 =head2 setPos
 
-  $genome_mask->setPos($chr,$pos)
+  Arg [1] : String - Chromosome
+  Arg [2] : Integer - Position
 
-Set the bit to 1 for this position
+  Description : Set the bit a this genome location
 
 =cut
 
@@ -141,9 +176,12 @@ sub setPos {
 
 =head2 setRegion
 
-  $genome_mask->setRegion($chr,$start,$end)
+  Arg [1] : String - Chromosome
+  Arg [2] : Integer - Position start
+  Arg [3] : Integer - Position end
 
-Set all bits to 1 for this region
+  Example     ; $genome_mask->setRegion($chr,$start,$end)
+  Description : Set all bits to 1 for this region
 
 =cut
 
@@ -156,9 +194,11 @@ sub setRegion {
 
 =head2 getPos
 
-  my $boolean = $genome_mask->getPos($chr,$pos)
+  Arg [1] : String - Chromosome
+  Arg [2] : Integer - Position
 
-Retrun true is the bit is set for this position
+  Description : Return true is the bit is set at this genomic location
+  ReturnType  : Boolean
 
 =cut
  
@@ -170,9 +210,14 @@ sub getPos {
 
 =head2 getPosSetInRegion
 
-  my $nb_pos_set = $genome_mask->getNbBitsSetInRegion($chr,$start,$end)
+  Arg [1] : String - Chromosome
+  Arg [2] : Integer - Position start
+  Arg [3] : Integer - Position end
 
-Return the positions of bits set in this genomic region
+  Example     : my @nb_pos_set = @{$genome_mask->getNbBitsSetInRegion($chr,$start,$end)};
+  Description : Return all the posititions of the bits set in this genomic
+                region
+  ReturnType  : Array(Integer)
 
 =cut
 
@@ -190,9 +235,12 @@ sub getPosSetInRegion {
 
 =head2 getNbBitsSetInRegion
 
-  my $nb_pos_set = $genome_mask->getNbBitsSetInRegion($chr,$start,$end)
+  Arg [1] : String - Chromosome
+  Arg [2] : Integer - Position start
+  Arg [3] : Integer - Position end
 
-Return the number of bit set in this genomic region
+  Description : Return the number of bits set in this genomic region
+  ReturnType  : Integer
 
 =cut
 
@@ -203,7 +251,12 @@ sub getNbBitsSetInRegion {
 
 =head2 rank
 
-Return the number of bit set in the genome before this position
+  Arg [1] : String - Chromosome
+  Arg [2] : Integer - Position
+
+  Description : Return the number of bits set, up to this genomic
+                position as if the genome was linear.
+  ReturnType  : Integer
 
 =cut
 
@@ -221,7 +274,11 @@ sub rank {
 
 =head2 select 
 
-Return an array with a (chr,pos) of the Nth bit set
+  Arg [1] : Integer - Nth bit set
+
+  my ($chr,$pos) = $genome_mask->select(12)
+  Description : Return an array with the (chr,pos) of the Nth bit set
+  ReturnType  : Array(String,Integer)
 
 =cut
 
@@ -241,8 +298,5 @@ sub select {
   my $pos = $self->getBitvector($chr_sorted[$j-1])->select($i - $cumulated_bits + 1);
   return ($chr,$pos);
 }
-
-
-
 
 1;
