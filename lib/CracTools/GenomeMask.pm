@@ -27,6 +27,10 @@ to query this mask. It can read genome sequence and length from various sources
 You can look at L<CracTools::BitVector> that is the underlying datastructure of
 L<CracTools::GenomeMask>.
 
+=head1 TODO
+
+The GenomeMask should be able to handle double strand DNA (as an option)
+
 =head1 METHODS
 
 =head2 new

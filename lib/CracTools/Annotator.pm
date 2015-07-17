@@ -34,7 +34,7 @@ use CracTools::Interval::Query::File;
 
 =head1 DESCRIPTION
 
-Is a module based on L<CracTools::Interval::Query::File> that provides powerfull
+This module is based on L<CracTools::Interval::Query::File> and provides powerfull
 methods to query annotation files and prioritize hits to fit specific
 application needs.
 

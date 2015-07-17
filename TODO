@@ -1,15 +1,25 @@
+# Update libs
 - [x] Manage GFF files instead of using Ensembl API (Optional).
 - [ ] Integrate SAMTOOLS tabix API to read BAM files quicker
 - [ ] Measure Interval::Query::File vs tabix
 - [x] When Querying and interval we want to retrieve the data and the interval that is associated to this data
-- [ ] Add a class for generating standard log files like [process:time] message
 - [X] Multi-thread cractools-count procedure
 - [ ] Create a library to easily create test that use files as __GFF__
 - [X] Place binaries buisiness code into Module under CracTools::App:: namespace
       This way we will be able to test all the code properly!
-- [ ] Test cractools-filterN script
 - [ ] Test cractools-extract script
 - [x] Add multi-bam support for cractools-count
 - [x] Figure out why cractools-count does not give the exact same counts
+- [ ] Use Stein Perl-BAM library instead of piping the samtools view command
+
+# Update binaries
 - [ ] Make CracTools count faster!
 - [ ] Make cractools-count PE aware, to remove eventual ambiguity in counts
+
+# New Modules
+- [ ] Add a class for generating standard log files like [process:time] message
+- [ ] Place cractools-extract business logic under CracTools::App to allow POD documentation and testing
+- [ ] Create some base class that all scripts/binaries should inherit : CracTools::App.pm ?!
+- [ ] Create a CracTools::GenomicParrallel class do easily multi-threads script on genomic chunks base
+      like in cractools-extract
+- [ ] Developper guide should be a POD document

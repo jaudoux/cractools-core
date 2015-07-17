@@ -27,6 +27,11 @@ CracTools-core is also shiped with some binaries that are directly based on the 
 
 =back
 
+=head1 SPECIFICITIES
+
+In CracTools, strand are encoded as 1, -1 for forward and reverse respectively.
+CracTools work on close intervals [a,b] and 0-based coordinate system.
+
 =head1 MODULES
 
 =head2 File parsing
@@ -51,7 +56,7 @@ Is a module to parse and access GFF3 file.
 
 =head3 L<CracTools::Interval::Query>
 
-Is a module to store and query variables associated with genomic intervals. It
+Is a module to store and query genomic intervals associated with variables. It
 is based on the interval tree datastructure provided by L<Set::IntervalTree>.
 
 =head3 L<CracTools::Interval::Query::File>
@@ -90,5 +95,11 @@ Is a module that provide methods to write customized column-based output files
 with pre-defined headers.
 
 =cut
+
+#=head1 CODING STYLE CONVENTION
+#
+#=head2 Subroutine
+#
+#Subroutine names should be
 
 1; 

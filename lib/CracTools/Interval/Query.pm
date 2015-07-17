@@ -9,6 +9,39 @@ use CracTools::Utils;
 use Set::IntervalTree 0.10;
 use Carp;
 
+=head1 SYNOPSIS
+
+  my $interval_query = CracTools::Interval::Query->new();
+
+  $interval_query->addInterval("chr1",1,12,1,"geneA");
+  $interval_query->addInterval("chr2",5,14,1,"geneB");
+
+  @results = @{$intervalQuery->fetchByRegion("chr1",12,15,1)};
+
+  foreach my $gene (@results) {
+    print STDERR "Found $gene overlapping gene\n";
+  }
+
+=head1 DESCRIPTION
+
+This module stores and query genomic intervals associated with variables. It
+is based on the interval tree datastructure provided by L<Set::IntervalTree>.
+
+L<CracTools::Interval::Query> query methods all returns a Array reference with all the
+scalar associated to the retrieved intervals. But it also return an ArrayRef with the
+intervals (start,end) themself, see L</_processReturnValues> for more informations.
+
+All L<CracTools::Interval::Query> method can be used without the strand argument (or undef).
+In this case, we will only consider the forward strand.
+
+This class can be easily overloaded with L</_processReturnValue> hook method.
+
+=head1 SEE ALSO
+
+You may want to check L<CracTools::Interval::Query::File> that is an implementation
+of L<CracTools::Interval::Query> that directly retrieve intervals from standard files
+(BED,SAM,GTF,GFF) and returns the lines associated to the queried intervals.
+
 =head1 METHODS
 
 =head2 new
@@ -34,21 +67,16 @@ sub new {
 
 =head2 addInterval
 
-  Arg [1] : String $chr
-            The name of the sequence region that the slice will be
-            created on.
-  Arg [2] : int $start
-            The start of the slice on the sequence region
-  Arg [3] : int $end
-            The end of the slice on the sequence region
-  Arg [4] : int $strand
-            The orientation of the slice on the sequence region (1 or -1)
-  Arg [5] : Any scalar $value
-            The value to be hold by this interval. It can be anything,
-            an integer, a hash reference, an array reference, ...
+  Arg [1] : String              - Chromosome
+  Arg [2] : Integer             - Start position
+  Arg [3] : Integer             - End position
+  Arg [4] : (Optional) Integer  - Strand
+  Arg [5] : Scalar              - The value to be hold by this interval. It can
+                                  be anything, an Integer, a String, a hash 
+                                  reference, an array reference, ...
 
-  Example     :
-  Description : Add a new genomic interval, with an associated value to the structure
+  Example     : $interval_query->addInterval("chr1",12,30,-1,"geneA")
+  Description : Add a new genomic interval, with an associated value to the interval_query.
 
 =cut
 
@@ -73,23 +101,16 @@ sub addInterval {
 
 =head2 fetchByRegion
 
-  Arg [1] : String $seq_region_name
-            The name of the sequence region that the slice will be
-            created on.
-  Arg [2] : int $start
-            The start of the slice on the sequence region
-  Arg [3] : int $end
-            The end of the slice on the sequence region
-  Arg [4] : (Optional) int $strand
-            The orientation of the slice on the sequence region
-  Arg [5] : (Optional) Boolean $windowed
-            Only return lines whose intervals are completely contained
-            if the slide.
+  Arg [1] : String              - Chromosome
+  Arg [2] : Integer             - Start position
+  Arg [3] : Integer             - End position
+  Arg [4] : (Optional) Integer  - Strand
+  Arg [5] : (Optional) Boolean  - Windowed query, only return intervals which
+                                  are completely contained in the queried region.
 
-  Example     : my @lines = $IntervalQuery->fetchByRegion('1',298345,309209,'+');
-  Description : Retrives lines that belong to the region.
-  ReturnType  : Reference to an Array of strings
-  Exceptions  : none
+  Example     : my @values = $IntervalQuery->fetchByRegion('1',298345,309209,'+');
+  Description : Retrieves intervals that belong to the region.
+  ReturnType  : ArrayRef of scalar
 
 =cut
 
@@ -112,18 +133,13 @@ sub fetchByRegion {
 
 =head2 fetchByLocation
 
-  Arg [1] : String $seq_region_name
-            The name of the sequence region that the slice will be
-            created on.
-  Arg [2] : int $position
-            Location to look for
-  Arg [3] : int $strand
-            The orientation of the slice on the sequence region
+  Arg [1] : String              - Chromosome
+  Arg [2] : Integer             - Positon
+  Arg [3] : (Optional) Integer  - Strand
 
-  Example     : my @lines = $intervalQuery->fetchByLocation('1',298345,'+');
-  Description : Retrives lines that overlapped the given location.
-  ReturnType  : Reference to an Array of strings
-  Exceptions  : none
+  Example     : my @values = $intervalQuery->fetchByLocation('1',298345,'+');
+  Description : Retrieves lines that overlapped the given location.
+  ReturnType  : ArrayRef of Scalar
 
 =cut
 
@@ -134,8 +150,14 @@ sub fetchByLocation {
 
 =head2 fetchNearestDown
 
-Search for the closest interval in downstream that does not contain the query
-and returns the line associated to this interval. 
+  Arg [1] : String              - Chromosome
+  Arg [2] : Integer             - Position
+  Arg [3] : (Optional) Integer  - Strand
+
+  Example     : my @values = $interval_query->fetchNearestDown('1',298345,'+');
+  Description : Search for the closest interval in downstream that does not contain the query
+                and returns the line associated to this interval. 
+  ReturnType  : Scalar
 
 =cut
 
@@ -157,8 +179,14 @@ sub fetchNearestDown {
 
 =head2 fetchNearestUp
 
-Search for the closest interval in downstream that does not contain the query
-and returns the line associated to this interval. 
+  Arg [1] : String             - Chromosome
+  Arg [2] : Integer            - Position
+  Arg [3] : (Optional) Integer - Strand
+
+  Example     : my @values = $interval_query->fetchNearestDown('1',298345,'+');
+  Description : Search for the closest interval in upstream that does not contain the query
+                and returns the line associated to this interval. 
+  ReturnType  : Scalar
 
 =cut
 
@@ -180,8 +208,14 @@ sub fetchNearestUp {
 
 =head2 fetchAllNearestDown
 
-Search for the closest intervals in downstream that does not contain the query
-and returns an array reference of lines associated to these intervals. 
+  Arg [1] : String             - Chromosome
+  Arg [2] : Integer            - Position
+  Arg [3] : (Optional) Integer - Strand
+
+  Example     : my @values = $interval_query->fetchNearestDown('1',298345,'+');
+  Description : Search for all the closest interval in downstream that does not contain the query
+                and returns the line associated to this interval. 
+  ReturnType  : ArrayRef of Scalar
 
 =cut
 
@@ -208,8 +242,14 @@ sub fetchAllNearestDown {
 
 =head2 fetchAllNearestUp
 
-Search for the closest intervals in downstream that does not contain the query
-and returns an array reference of lines associated to these intervals. 
+  Arg [1] : String             - Chromosome
+  Arg [2] : Integer            - Position
+  Arg [3] : (Optional) Integer - Strand
+
+  Example     : my @values = $interval_query->fetchNearestDown('1',298345,'+');
+  Description : Search for all the closest interval in upstream that does not contain the query
+                and returns the line associated to this interval. 
+  ReturnType  : ArrayRef of Scalar
 
 =cut
 
@@ -240,9 +280,11 @@ sub fetchAllNearestUp {
 
 =head2 _getIntervalTree 
 
-  $self->_getIntervalTree($chr,$strand);
+  Arg [1] : String             - Chromosome
+  Arg [2] : (Optional) Integer - Strand
 
-Return the Set::IntervalTree reference for the chromosome and strand (Default : 1)
+  Description : Return the Set::IntervalTree reference for the chromosome and strand (Default : 1)
+  ReturnType  : Set::IntervalTree
 
 =cut
 
@@ -253,10 +295,13 @@ sub _getIntervalTree {
 }
 
 =head2 _addIntervalTree
-  
-  $self->_addIntervalTree($chr,$strnad,$interval_tree);
 
-Add an Set::IntervalTree object for a specific ("chr","strand") pair.
+  Arg [1] : String             - Chromosome
+  Arg [2] : (Optional) Integer - Strand
+  Arg [3] : Set::IntervalTree  - Interval tree
+
+  Description : Add an Set::IntervalTree object for a specific ("chr","strand") pair.
+                Strand is set to 1 if none (or undef) is provided
 
 =cut
 
@@ -268,9 +313,12 @@ sub _addIntervalTree {
 
 =head2 _getIntervalTreeKey
 
-  _getIntervalTreeKey($chr,$strand);
+  Arg [1] : String             - Chromosome
+  Arg [2] : (Optional) Integer - Strand
 
-Static method that return and unique key for the ("chr","strand") pair passed in arguements.
+  Description : Static method that return and unique key for the ("chr","strand") pair passed in arguements.
+                Strand is set to 1 if none (or undef) is provided
+  ReturnType  : String
 
 =cut
 
@@ -282,9 +330,18 @@ sub _getIntervalTreeKey {
 
 =head2 _processReturnValues
 
-  $self->_processReturnValues($array_ref)
+  Arg [1] : ArrayRef - Values returned by Set::IntervalTree
 
-Call _processReturnValue() method on each values of the array ref passed in parameters.
+  Example     : # Either get only the values holded by the retrieved intervals
+                my @values = @{$interval_query->_processReturnValues($interval_results)};
+                # Or also get the intervals themselves
+                my ($intervals,$values) = $interval_query->_processReturnValues($interval_results);
+  Description : Call _processReturnValue() method on each values of the array ref passed in parameters.
+  ReturnType  : Array(ArrayRef({start => .., end => ..}),ArrayRef(Scalar))
+                (
+                  [ { start => 12, end => 20 }, ... ],
+                  [ "geneA", ...]
+                )
 
 =cut
 
@@ -306,10 +363,12 @@ sub _processReturnValues {
 
 =head2 _processReturnValue
 
-  $self->_processReturnValue($val)
+  Arg [1] : Scalar - Value holded by an interval
 
-This method process the values contains by each intervals that match a query before returning it.
-It is designed to be overloaded by doughter classes.
+  Description : This method process the values contains by each intervals that
+                match a query before returning it.  It is designed to be
+                overloaded by doughter classes.
+  ReturnType  : Scalar (ArrayRef,HashRef,String,Integer...)
 
 =cut
 
