@@ -11,9 +11,17 @@ install_local.sh
 ^test/
 ^test
 ^extra/
+^doc/
 \.cfg$
 ^TODO
 MANIFEST.SKIP
 
 # temprary skipped
+lib/CracTools/App/Count.pm
+lib/CracTools/Aligner
 bin/cractools-filtern
+bin/cractools-count
+scripts/convertTranscriptCountsInGeneCounts.pl
+scripts/generateReport.pl
+scripts/mergeCounts.pl
+

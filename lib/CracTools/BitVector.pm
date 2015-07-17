@@ -335,6 +335,8 @@ sub nbSet {
 }
 
 # Retro-compatibility alias
+=head3 alias: nb_set
+=cut
 sub nb_set { my $self = shift; $self->nbSet(@_);}
 
 =head2 toString
@@ -364,6 +366,8 @@ sub toString {
 }
 
 # Retro-compatibility alias
+=head3 alias: to_string
+=cut
 sub to_string { my $self = shift; $self->toString(@_);}
 
 1;

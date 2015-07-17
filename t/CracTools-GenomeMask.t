@@ -38,89 +38,89 @@ my $sam_file = new File::Temp( SUFFIX => '.sam', UNLINK => 1);
 while(<SAM>) {print $sam_file $_;}
 close $sam_file;
 $g_mask = CracTools::GenomeMask->new(sam_reader => CracTools::SAMReader->new($sam_file));
-is($g_mask->getChrLength("2"),242193529,"sam_reader constructor");
+is($g_mask->getChrLength("2"),2421,"sam_reader constructor");
 
 my $conf_file = new File::Temp( SUFFIX => '.conf', UNLINK => 1);
 while(<CRACCONF>) {print $conf_file $_;}
 close $conf_file;
 $g_mask = CracTools::GenomeMask->new(crac_index_conf => $conf_file);
-is($g_mask->getChrLength("2"),242193529,"crac_index_conf constructor");
+is($g_mask->getChrLength("2"),2421,"crac_index_conf constructor");
 
 __SAM__
 @HD	VN:1.5	SO:coordinate
 @RG	ID:1	DT:2015-07-13T16:06:12
 @PG	ID:1	PN:crac	VN:2.0.0	CL:crac -k 22 --bam -o - --stranded -r reads/ENCSR109IQO_rep1_1.fastq.gz -i /data/indexes/crac/GRCh38 --nb-threads 15 reads/ENCSR109IQO_rep1_2.fastq.gz
-@SQ	SN:1	LN:248956422
-@SQ	SN:2	LN:242193529
-@SQ	SN:3	LN:198295559
-@SQ	SN:4	LN:190214555
-@SQ	SN:5	LN:181538259
-@SQ	SN:6	LN:170805979
-@SQ	SN:7	LN:159345973
-@SQ	SN:8	LN:145138636
-@SQ	SN:9	LN:138394717
-@SQ	SN:10	LN:133797422
-@SQ	SN:11	LN:135086622
-@SQ	SN:12	LN:133275309
-@SQ	SN:13	LN:114364328
-@SQ	SN:14	LN:107043718
-@SQ	SN:15	LN:101991189
-@SQ	SN:16	LN:90338345
-@SQ	SN:17	LN:83257441
-@SQ	SN:18	LN:80373285
-@SQ	SN:19	LN:58617616
-@SQ	SN:20	LN:64444167
-@SQ	SN:21	LN:46709983
-@SQ	SN:22	LN:50818468
-@SQ	SN:X	LN:156040895
-@SQ	SN:Y	LN:57227415
+@SQ	SN:1	LN:2489
+@SQ	SN:2	LN:2421
+@SQ	SN:3	LN:1982
+@SQ	SN:4	LN:1902
+@SQ	SN:5	LN:1815
+@SQ	SN:6	LN:1708
+@SQ	SN:7	LN:1593
+@SQ	SN:8	LN:1451
+@SQ	SN:9	LN:1383
+@SQ	SN:10	LN:1337
+@SQ	SN:11	LN:1350
+@SQ	SN:12	LN:1332
+@SQ	SN:13	LN:1143
+@SQ	SN:14	LN:1070
+@SQ	SN:15	LN:1019
+@SQ	SN:16	LN:9033
+@SQ	SN:17	LN:8325
+@SQ	SN:18	LN:8037
+@SQ	SN:19	LN:5861
+@SQ	SN:20	LN:6444
+@SQ	SN:21	LN:4670
+@SQ	SN:22	LN:5081
+@SQ	SN:X	LN:1560
+@SQ	SN:Y	LN:5722
 __CRACCONF__
 24
 1
-248956422
+2489
 2
-242193529
+2421
 3
-198295559
+1982
 4
-190214555
+1902
 5
-181538259
+1815
 6
-170805979
+1708
 7
-159345973
+1593
 8
-145138636
+1451
 9
-138394717
+1383
 10
-133797422
+1337
 11
-135086622
+1350
 12
-133275309
+1332
 13
-114364328
+1143
 14
-107043718
+1070
 15
-101991189
+1019
 16
-90338345
+9033
 17
-83257441
+8325
 18
-80373285
+8037
 19
-58617616
+5861
 20
-64444167
+6444
 21
-46709983
+4670
 22
-50818468
+5081
 X
-156040895
+1560
 Y
-57227415
+5722

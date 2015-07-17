@@ -27,8 +27,4 @@ CracTools pipelines.
 
 our $NOT_AVAILABLE = 'NA';
 
-=over
-
-=cut
-
 1;

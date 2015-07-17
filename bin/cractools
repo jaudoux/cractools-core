@@ -5,29 +5,5 @@
 use strict;
 use warnings;
 
-use Getopt::Long qw(:config auto_version ); # Get options
-use Pod::Usage;
-use CracTools;
-
-=head1 SYNOPSIS
-
-  cractools extract
-  cractools count
-  cractools help (this message)
-
-=cut
-
-# Get the command arguments
-my $command = shift;
-
-my %commands = (extract => 'cractools-extract',
-  count => 'cractools-count',
-  gtf2togff3 => 'cractools-gtf2togff3',
-);
-
-if(defined $command && defined $commands{$command}) {
-  system($commands{$command},@ARGV);
-} else {
-  pod2usage(-verbose => 1);
-  exit 0;
-}
+use CracTools::App;
+CracTools::App->run;

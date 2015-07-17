@@ -1,201 +1,189 @@
-#! /usr/bin/perl
+package CracTools::App::Command::Extract;
 # ABSTRACT: Extract events identified by CRAC.
 # PODNAME: cractools extract
+
+use CracTools::App -command;
 
 use strict;
 use warnings;
 
-use Getopt::Long qw(GetOptionsFromArray :config auto_version ); # Get options
-use Pod::Usage;
 use CracTools;
 use CracTools::Utils;
 use CracTools::SAMReader::SAMline;
 use Parallel::ForkManager 0.7.6;
 
 use constant CHUNK_SIZE => 10000000;
-use constant GENE_COLOR => 93;
-use constant EXON_COLOR => 92;
 use constant MIN_GAP_LENGTH => 0;
 
-=head1 SYNOPSIS
+sub usage_desc { "cractools extract file.bam [regions] [-p nb_threads] [--splices splice.bed] [--mutations file.vcf] [--chimeras chimeras.tsv]" }
 
-  cractools extract file.bam [regions] [-p nb_threads] [--splices splice.bed] [--mutations file.vcf] [--chimeras chimeras.tsv]
+sub opt_spec {
+  return (
+    [ "p=i",  "Number of process to run", { default => 1 }       ],
+    [ "splices|s=s",  "Bed file where splices will be extracted."       ],
+    [ "chimeras|c=s",  "Tabulated file where chimeras will be extracted"       ],
+    [ "mutations|m=s",  "VCF file where mutations will be extracted"       ],
+    [ "coverless-splices",  "Consider splice that have no cover"       ],
+    [ "stranded",  "Strand specific protocol", { default => 'False' }        ],
+  );
+}
 
-=head1 OPTIONS
-
-  --help                 Print this help
-  --man                  Open man page
-  -p=INT                 Number of process to run (default:1)
-  --splices=<FILE>       Extract splices and print them in a bed file.
-  --mutations=<FILE>     Extract mutations (SNVs and InDels) and print them in a vcf file.
-  --chimeras=<FILE>      Extract chimeric junctions and print them in a tabulated file.
-  --stranded             Strand specific protocol (default : FALSE)
-
-=head1 TODO
-
-We should only consider uniquely aligned reads
-We should provide --rf,--fr,--ff options for stranded protocols
-
-=cut  
-
-my ($help,
-  $man,
-  $verbose,
-  $splices_file,
-  $mutations_file,
-  $chimeras_file,
-  $coverless_splices,
-  $is_stranded,
-);
-
-my $nb_process = 1;
-$is_stranded = 0;
-
-GetOptions(
-  "v|verbose"         => \$verbose,
-  "s|splices=s"       => \$splices_file,
-  "m|mutations=s"     => \$mutations_file,
-  "c|chimeras=s"      => \$chimeras_file,
-  "coverless-splices" => \$coverless_splices,
-  "p=i"               => \$nb_process,
-  "stranded"          => \$is_stranded,
-  "man"               => \$man,
-  "help"              => \$help,
-) or pod2usage(-verbose => 1);
-
-pod2usage(-verbose => 1)  if ($help);
-pod2usage(-verbose => 2)  if ($man);
-
-my $bam_file = shift @ARGV;
-pod2usage(-verbose => 1)  unless defined $bam_file;
-my @regions = @ARGV;
-my $min_gap_length = MIN_GAP_LENGTH;
-
-if(@regions == 0) {
-  # If we need to explore the whole genome
-  # we split it in CHUNK_SIZE regions
-  my $it = CracTools::Utils::bamFileIterator($bam_file,"-H");
-  while (my $line = $it->()) {
-    next if $line !~ /^\@SQ/;
-    my ($chr,$length) = $line =~ /^\@SQ\s+SN:(\S+)\s+LN:(\d+)/;
-    for(my $i = 0; $i < $length/CHUNK_SIZE; $i++) {
-      push(@regions,"$chr:".($i*CHUNK_SIZE)."-".(($i+1)*CHUNK_SIZE));
-    }
+sub validate_args {
+  my ($self, $opt, $args) = @_;
+  my %valid_options = map { $_->[0] => $_->[1] } $self->opt_spec;
+  $self->usage_error("Missing BAM file to extract") if @$args < 1;
+  for my $name ( @$args ) {
+    $self->usage_error("$name is not a valid option") if $name =~ /^-/;
   }
 }
 
-# Create Fork pool
-my $pm = Parallel::ForkManager->new($nb_process);
+sub execute {
+  my ($self, $opt, $args) = @_;
 
-my %chimeras;
+  my $help              = $opt->{help};
+  my $man               = $opt->{man};
+  my $verbose           = $opt->{verbose};
+  my $splices_file      = $opt->{splices};
+  my $mutations_file    = $opt->{mutations};
+  my $chimeras_file     = $opt->{chimeras};
+  my $coverless_splices = $opt->{coverless_splices};
+  my $is_stranded       = $opt->{stranded};
+  my $nb_process        = defined $opt->{p}? $opt->{p} : 1;
 
-# data structure retrieval and handling
-$pm -> run_on_finish ( # called BEFORE the first call to start()
-  sub {
-    my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_structure_reference) = @_;
+  my $bam_file = shift @{$args};
+  pod2usage(-verbose => 1)  unless defined $bam_file;
+  my @regions = @{$ARGV};
+  my $min_gap_length = MIN_GAP_LENGTH;
 
-    # retrieve chimeras from childs
-    if (defined($data_structure_reference)) {
-      my $region_chimeras = $data_structure_reference->{chimeras};
-      foreach my $key (keys %{$region_chimeras}) {
-        my $chim_key = $key;
-        my ($chr1,$pos1,$strand1,$chr2,$pos2,$strand2) = split("@",$chim_key);
-        my $reverse_key = join("@",$chr2,$pos2,$strand2*-1,$chr1,$pos1,$strand1*-1);
-        if(!$is_stranded && defined $chimeras{$reverse_key}) {
-          $chim_key = $reverse_key;
-        }
-        if(defined $chimeras{$chim_key}) {
-          push(@{$chimeras{$chim_key}{reads}},@{$region_chimeras->{$key}->{reads}});
-          $chimeras{$chim_key}{score} += $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
-        } else {
-          $chimeras{$chim_key}{reads} = $region_chimeras->{$key}->{reads};
-          $chimeras{$chim_key}{score} = $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
-        }
+  if(@regions == 0) {
+    # If we need to explore the whole genome
+    # we split it in CHUNK_SIZE regions
+    my $it = CracTools::Utils::bamFileIterator($bam_file,"-H");
+    while (my $line = $it->()) {
+      next if $line !~ /^\@SQ/;
+      my ($chr,$length) = $line =~ /^\@SQ\s+SN:(\S+)\s+LN:(\d+)/;
+      for(my $i = 0; $i < $length/CHUNK_SIZE; $i++) {
+        push(@regions,"$chr:".($i*CHUNK_SIZE)."-".(($i+1)*CHUNK_SIZE));
       }
     }
   }
-);
 
-my $nb_region = 0;
-# Loop over regions
-REGION:
-foreach my $region (@regions) {
-  $nb_region++;
+  # Create Fork pool
+  my $pm = Parallel::ForkManager->new($nb_process);
 
-  # Fork regions
-  $pm->start() and next REGION;
+  my %chimeras;
 
-  # Open filehandles on output files
-  my $splices_fh = CracTools::Utils::getWritingFileHandle($splices_file.".".$nb_region) if defined $splices_file;
-  my $mutations_fh = CracTools::Utils::getWritingFileHandle($mutations_file.".".$nb_region) if defined $mutations_file;
+  # data structure retrieval and handling
+  $pm -> run_on_finish ( # called BEFORE the first call to start()
+    sub {
+      my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_structure_reference) = @_;
 
-  my($region_chr,$region_start,$region_end) = $region =~ /(\S+):(\d+)-(\d+)/;
-  # Declare hashes that will store events
-  my %splices;
-  my %mutations;
-  my %region_chimeras;
-  my $bam_it = CracTools::Utils::bamFileIterator($bam_file,$region);
-  while(my $raw_line = $bam_it->()) {
-    my $line = CracTools::SAMReader::SAMline->new($raw_line);
-    extractSplicesFromSAMline(\%splices,
-      $line,
-      $is_stranded,
-      $min_gap_length,
-      $coverless_splices,
-      $region_chr,
-      $region_start,
-      $region_end,
-    ) if defined $splices_fh;
-    extractMutationsFromSAMline(\%mutations,
-      $line,
-      $is_stranded,
-      $region_chr,
-      $region_start,
-      $region_end,
-      $bam_file,
-    ) if defined $mutations_fh;
-    extractChimerasFromSAMline(\%region_chimeras,
-      $line,
-      $is_stranded,
-      $region_chr,
-      $region_start,
-      $region_end,
-    ) if defined $chimeras_file;
+      # retrieve chimeras from childs
+      if (defined($data_structure_reference)) {
+        my $region_chimeras = $data_structure_reference->{chimeras};
+        foreach my $key (keys %{$region_chimeras}) {
+          my $chim_key = $key;
+          my ($chr1,$pos1,$strand1,$chr2,$pos2,$strand2) = split("@",$chim_key);
+          my $reverse_key = join("@",$chr2,$pos2,$strand2*-1,$chr1,$pos1,$strand1*-1);
+          if(!$is_stranded && defined $chimeras{$reverse_key}) {
+            $chim_key = $reverse_key;
+          }
+          if(defined $chimeras{$chim_key}) {
+            push(@{$chimeras{$chim_key}{reads}},@{$region_chimeras->{$key}->{reads}});
+            $chimeras{$chim_key}{score} += $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
+          } else {
+            $chimeras{$chim_key}{reads} = $region_chimeras->{$key}->{reads};
+            $chimeras{$chim_key}{score} = $region_chimeras->{$key}->{score} if defined $region_chimeras->{$key}->{score};
+          }
+        }
+      }
+    }
+  );
+
+  my $nb_region = 0;
+  # Loop over regions
+  REGION:
+  foreach my $region (@regions) {
+    $nb_region++;
+
+    # Fork regions
+    $pm->start() and next REGION;
+
+    # Open filehandles on output files
+    my $splices_fh = CracTools::Utils::getWritingFileHandle($splices_file.".".$nb_region) if defined $splices_file;
+    my $mutations_fh = CracTools::Utils::getWritingFileHandle($mutations_file.".".$nb_region) if defined $mutations_file;
+
+    my($region_chr,$region_start,$region_end) = $region =~ /(\S+):(\d+)-(\d+)/;
+    # Declare hashes that will store events
+    my %splices;
+    my %mutations;
+    my %region_chimeras;
+    my $bam_it = CracTools::Utils::bamFileIterator($bam_file,$region);
+    while(my $raw_line = $bam_it->()) {
+      my $line = CracTools::SAMReader::SAMline->new($raw_line);
+      extractSplicesFromSAMline(\%splices,
+        $line,
+        $is_stranded,
+        $min_gap_length,
+        $coverless_splices,
+        $region_chr,
+        $region_start,
+        $region_end,
+      ) if defined $splices_fh;
+      extractMutationsFromSAMline(\%mutations,
+        $line,
+        $is_stranded,
+        $region_chr,
+        $region_start,
+        $region_end,
+        $bam_file,
+      ) if defined $mutations_fh;
+      extractChimerasFromSAMline(\%region_chimeras,
+        $line,
+        $is_stranded,
+        $region_chr,
+        $region_start,
+        $region_end,
+      ) if defined $chimeras_file;
+    }
+    printSplices(\%splices,$splices_fh) if defined $splices_fh;
+    printMutations(\%mutations,$mutations_fh) if defined $mutations_fh;
+    $pm->finish(0,{chimeras => \%region_chimeras});
   }
-  printSplices(\%splices,$splices_fh) if defined $splices_fh;
-  printMutations(\%mutations,$mutations_fh) if defined $mutations_fh;
-  $pm->finish(0,{chimeras => \%region_chimeras});
+  $pm->wait_all_children;
+
+  my $chimeras_fh = CracTools::Utils::getWritingFileHandle($chimeras_file) if defined $chimeras_file;
+  print $chimeras_fh "#",join("\t",qw( chr1 pos1 strand1 chr2 pos2 strand2 score reads cover)),"\n" if defined $chimeras_fh;
+  printChimeras(\%chimeras,$chimeras_fh) if defined $chimeras_fh;
+
+  # Merge Splice and Mutation files
+  my $splices_fh = CracTools::Utils::getWritingFileHandle($splices_file) if defined $splices_file;
+  my $mutations_fh = CracTools::Utils::getWritingFileHandle($mutations_file) if defined $mutations_file;
+  # Print headers on output files
+  print $splices_fh "track name=junctions\n" if defined $splices_fh;
+  print $mutations_fh "##fileformat=VCFv4.1\n",
+    "###source=$CracTools::DIST (v $CracTools::VERSION)\n",
+    "###INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">\n",
+    "###INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">\n",
+    "###INFO=<ID=CS,Number=A,Type=Float,Description=\"CRAC confidence score\">\n",
+    "##CHROM POS     ID        REF    ALT     QUAL FILTER INFO\n" if defined $mutations_fh;
+
+  for (my $region_id = 1; $region_id <= $nb_region; $region_id++) {
+    if(defined $splices_file) {
+      my $fh = CracTools::Utils::getReadingFileHandle($splices_file.".".$region_id);
+      while(my $line = <$fh>) { print $splices_fh $line; }
+      unlink $splices_file.".".$region_id;
+    }
+    if(defined $mutations_file) {
+      my $fh = CracTools::Utils::getReadingFileHandle($mutations_file.".".$region_id);
+      while(my $line = <$fh>) { print $mutations_fh $line; }
+      unlink $mutations_file.".".$region_id;
+    }
+  }
 }
-$pm->wait_all_children;
 
-my $chimeras_fh = CracTools::Utils::getWritingFileHandle($chimeras_file) if defined $chimeras_file;
-print $chimeras_fh "#",join("\t",qw( chr1 pos1 strand1 chr2 pos2 strand2 score reads cover)),"\n" if defined $chimeras_fh;
-printChimeras(\%chimeras,$chimeras_fh) if defined $chimeras_fh;
-
-# Merge Splice and Mutation files
-my $splices_fh = CracTools::Utils::getWritingFileHandle($splices_file) if defined $splices_file;
-my $mutations_fh = CracTools::Utils::getWritingFileHandle($mutations_file) if defined $mutations_file;
-# Print headers on output files
-print $splices_fh "track name=junctions\n" if defined $splices_fh;
-print $mutations_fh "##fileformat=VCFv4.1\n",
-  "###source=$CracTools::DIST (v $CracTools::VERSION)\n",
-  "###INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">\n",
-  "###INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">\n",
-  "###INFO=<ID=CS,Number=A,Type=Float,Description=\"CRAC confidence score\">\n",
-  "##CHROM POS     ID        REF    ALT     QUAL FILTER INFO\n" if defined $mutations_fh;
-
-for (my $region_id = 1; $region_id <= $nb_region; $region_id++) {
-  if(defined $splices_file) {
-    my $fh = CracTools::Utils::getReadingFileHandle($splices_file.".".$region_id);
-    while(my $line = <$fh>) { print $splices_fh $line; }
-    unlink $splices_file.".".$region_id;
-  }
-  if(defined $mutations_file) {
-    my $fh = CracTools::Utils::getReadingFileHandle($mutations_file.".".$region_id);
-    while(my $line = <$fh>) { print $mutations_fh $line; }
-    unlink $mutations_file.".".$region_id;
-  }
-}
+=head2 extractSplicesFromSAMline
+=cut
 
 sub extractSplicesFromSAMline {
   my ($splices,$line,$is_stranded,$min_gap_length,$coverless_splices,$region_chr,$region_start,$region_end) = @_;
@@ -262,7 +250,8 @@ sub extractSplicesFromSAMline {
 }
 
 # TODO add support of not stranded RNA-Seq
-
+=head2 printSplices
+=cut
 sub printSplices {
   my $splices = shift;
   my $output_fh = shift;
@@ -283,6 +272,8 @@ sub printSplices {
   }
 }
 
+=head2 extractMutationsFromSAMline
+=cut
 sub extractMutationsFromSAMline {
   my ($mutations,$line,$is_stranded,$region_chr,$region_start,$region_end,$bam_file,$ref_file_folder) = @_;
   # Next for secondary alignements
@@ -378,6 +369,8 @@ sub extractMutationsFromSAMline {
   }
 }
 
+=head2 printMutations
+=cut
 sub printMutations {
   my $mutations = shift;
   my $output_fh = shift;
@@ -395,7 +388,8 @@ sub printMutations {
 }
 
 ## SUBROUTINES
-
+=head2 addMutation
+=cut
 sub addMutation {
   my %args = @_;
   
@@ -419,6 +413,8 @@ sub addMutation {
   }
 }
 
+=head2 countReadCoverFromRegion
+=cut
 sub countReadCoverFromRegion {
   my ($bam_file,$chr,$pos1,$pos2) = @_;
   $pos2 = $pos1 if !defined $pos2;
@@ -430,6 +426,8 @@ sub countReadCoverFromRegion {
   return $nb_total;
 }
 
+=head2 getSeqFromIndexedRef
+=cut
 sub getSeqFromIndexedRef {
   my ($ref_file,$chr,$pos,$length) = @_;
   my $region = "$chr:$pos-".($pos+$length-1);
@@ -438,6 +436,8 @@ sub getSeqFromIndexedRef {
   return $seq;
 }
 
+=head2 extractChimerasFromSAMline
+=cut
 sub extractChimerasFromSAMline {
   my ($chimeras,$line,$is_stranded,$region_chr,$region_start,$region_end) = @_;
   # Next for secondary alignements
@@ -467,6 +467,8 @@ sub extractChimerasFromSAMline {
   }
 }
 
+=head2 printChimeras
+=cut
 sub printChimeras {
   my $chimeras = shift;
   my $output_fh = shift;
@@ -487,3 +489,5 @@ sub printChimeras {
                      , "\n";
   }
 }
+
+1;

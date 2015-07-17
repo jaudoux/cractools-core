@@ -470,6 +470,8 @@ sub getSeqFromIndexedRef {
 
 =head1 PARSING LINES
 
+=head2 parseBedLine
+
 =cut
 
 sub parseBedLine {
