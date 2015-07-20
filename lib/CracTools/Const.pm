@@ -21,10 +21,18 @@ CracTools pipelines.
 
 =item NOT_AVAILABLE
 
-=back
-
 =cut
 
 our $NOT_AVAILABLE = 'NA';
+
+=item NUCLEOTIDES => [ A, C, G, T ]
+
+=cut
+
+our $NUCLEOTIDES = [A, C, G, T ];
+
+=back
+
+=cut
 
 1;
