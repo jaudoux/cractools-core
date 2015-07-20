@@ -21,7 +21,7 @@ use Fcntl qw( SEEK_SET );
   }
 
   # Reading paired-end files easier
-  my $it = pairedEndSeqFileIterator($file);
+  my $it = pairedEndSeqFileIterator($reads1,$reads2,$format);
   while (my $entry = $it->()) {
     print "Read_1 : $entry->{read1}->{seq}
            Read_2 : $entry->{read2}->{seq}";
@@ -240,7 +240,7 @@ reads are sequenced from the same DNA fragment and saved in separated files.
 
 Example:
 
-  my $it = pairedEndSeqFileIterator($file);
+  my $it = pairedEndSeqFileIterator($reads1,$reads2,$format);
   while (my $entry = $it->()) {
     print "Read_1 : $entry->{read1}->{seq}
            Read_2 : $entry->{read2}->{seq}";
