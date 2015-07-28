@@ -29,7 +29,7 @@ our $NOT_AVAILABLE = 'NA';
 
 =cut
 
-our $NUCLEOTIDES = [A, C, G, T ];
+our $NUCLEOTIDES = ['A', 'C', 'G', 'T' ];
 
 =back
 

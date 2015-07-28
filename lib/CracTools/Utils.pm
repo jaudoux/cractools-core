@@ -460,11 +460,19 @@ sub bamFileIterator {
 
 =head2 getSeqFromIndexedRef
 
+BE AWARE this method is only availble if C<samtools> binary is availble.
+
+Return a sequence from a given region in a fasta indexed file
+
+Example:
+  
+  my $fasta_seq = CracTools::Utils::getSeqFromIndexedRef("file.fa","chr2",29012,10);
+
 =cut
 
 sub getSeqFromIndexedRef {
-  my ($ref_file,$chr,$pos,$length) = @_;
-  my $region = "$chr:$pos-".($pos+$length);
+  my ($ref_file,$chr,$pos,$length,$format) = @_;
+  my $region = "$chr:$pos-".($pos+$length-1);
   return `samtools faidx $ref_file "$region"`;
 }
 

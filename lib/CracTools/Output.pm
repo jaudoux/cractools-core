@@ -44,6 +44,7 @@ use warnings;
   Arg [sep]  : (Optional) Character to use as separator for columns
   Arg [file] : (Optional) String - Ouput file, if not specified
                CracTools::Output prints to STDOUT.
+  Arg [NA]   : (Optional NA string to use when for undef variables
 
   Example     : $output = CracTools::Output->new(file => 'output.txt', sep => '\t');
   Description : Create a new CracTools::Output object
@@ -57,6 +58,7 @@ sub new {
   my %args = @_;
 
   my $sep = DEFAULT_SEP unless $args{sep};
+  my $na = defined $args{NA}? $args{NA} : $CracTools::Const::NOT_AVAILABLE;
   my $output = $args{file};
   my $out_stream;
 
@@ -69,6 +71,7 @@ sub new {
   my $self = bless {
     sep => $sep, 
     out_stream => $out_stream,
+    NA => $na,
   }, $class;
   
   return $self
@@ -149,7 +152,7 @@ sub printLine {
   my $self = shift;
   for(my $cpt = 0; $cpt < scalar @_; $cpt++) {
     if(!defined $_[$cpt]) {
-      $_[$cpt] = $CracTools::Const::NOT_AVAILABLE;
+      $_[$cpt] = $self->{NA};
     }
   }
   $self->printlnOutput(join($self->{sep},@_));
