@@ -52,7 +52,7 @@ sub execute {
 
   my $bam_file = shift @{$args};
   pod2usage(-verbose => 1)  unless defined $bam_file;
-  my @regions = @{$ARGV};
+  my @regions = @{$args};
   my $min_gap_length = MIN_GAP_LENGTH;
 
   if(@regions == 0) {
@@ -166,7 +166,7 @@ sub execute {
     "###INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">\n",
     "###INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">\n",
     "###INFO=<ID=CS,Number=A,Type=Float,Description=\"CRAC confidence score\">\n",
-    "##CHROM POS     ID        REF    ALT     QUAL FILTER INFO\n" if defined $mutations_fh;
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" if defined $mutations_fh;
 
   for (my $region_id = 1; $region_id <= $nb_region; $region_id++) {
     if(defined $splices_file) {
@@ -278,7 +278,6 @@ sub extractMutationsFromSAMline {
   my ($mutations,$line,$is_stranded,$region_chr,$region_start,$region_end,$bam_file,$ref_file_folder) = @_;
   # Next for secondary alignements
   if(!$line->isFlagged(256) && !$line->isFlagged(2048)) {
-
     # If read has SNP
     foreach my $snp (@{$line->events('SNP')}) {
       # TODO make sure the SNP is contained in the region
@@ -287,6 +286,7 @@ sub extractMutationsFromSAMline {
       next if $pos >= $region_end || $pos < $region_start;
 
       next if $snp->{actual} =~ /N/i;
+      $snp->{expected} = 'N' if $snp->{expected} =~ /\?/i;
 
       # Uniq Hash key for SNP
       my $key = 'SNP'.$chr."@".$pos;
@@ -375,15 +375,14 @@ sub printMutations {
   my $mutations = shift;
   my $output_fh = shift;
   foreach my $mut (sort {$a->{chr} cmp $b->{chr} || $a->{pos} <=> $b->{pos}} values %{$mutations}) {
-    print $output_fh join "\t", ($mut->{chr},
+    print $output_fh join("\t",$mut->{chr},
       $mut->{pos}+1, # to be 1-based
       '.',
       $mut->{reference},
       (join ",", keys %{$mut->{alternative}}),
       '.',
       'PASS',
-      'DP='.$mut->{total}.';AF='.(join ",", map{$_/$mut->{total}} values %{$mut->{alternative}}).';CS='.$mut->{crac_score},
-    ),"\n";
+      'DP='.$mut->{total}.';AF='.(join ",", map{$_/$mut->{total}} values %{$mut->{alternative}}).';CS='.$mut->{crac_score}),"\n";
   }
 }
 
