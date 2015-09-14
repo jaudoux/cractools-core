@@ -222,9 +222,9 @@ sub extractSplicesFromSAMline {
         # PE specificity
         if($is_stranded) {
           if($line->isFlagged($CracTools::SAMReader::SAMline::flags{FIRST_SEGMENT})) {
-            $splices->{$key}{strand} = CracTools::Utils::convertStrand($splice->{strand}->strand*-1);
+            $splices->{$key}{strand} = CracTools::Utils::convertStrand($splice->{loc}->{strand}*-1);
           } else {
-            $splices->{$key}{strand} = CracTools::Utils::convertStrand($splice->{strand}->strand);
+            $splices->{$key}{strand} = CracTools::Utils::convertStrand($splice->{loc}->{strand});
           }
         } else {
           $splices->{$key}{strand} = "+";
