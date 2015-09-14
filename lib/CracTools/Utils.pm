@@ -124,6 +124,25 @@ sub convertStrand($) {
   return $conversion_hash{$strand};
 }
 
+=head2 removeChrPrefix
+
+Remove the "chr" prefix from a given string
+
+Example:
+  
+  say "reference name: ",removeChrPrefix("chr1");
+
+will print
+
+  reference name: 1
+
+=cut
+sub removeChrPrefix($) {
+  my $string = shift;
+  $string =~ s/^chr//;
+  return $string;
+}
+
 =head1 PARSING
 
 This are some tools that aim to read (bio) files like
