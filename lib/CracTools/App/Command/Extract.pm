@@ -7,19 +7,22 @@ use CracTools::App -command;
 use strict;
 use warnings;
 
+use Carp;
 use CracTools;
 use CracTools::Utils;
+use CracTools::SAMReader;
 use CracTools::SAMReader::SAMline;
 use Parallel::ForkManager 0.7.6;
 
 use constant CHUNK_SIZE => 10000000;
 use constant MIN_GAP_LENGTH => 0;
 
-sub usage_desc { "cractools extract file.bam [regions] [-p nb_threads] [--splices splice.bed] [--mutations file.vcf] [--chimeras chimeras.tsv]" }
+sub usage_desc { "cractools extract file.bam [regions] [-r ref.fa] [-p nb_threads] [--splices splice.bed] [--mutations file.vcf] [--chimeras chimeras.tsv]" }
 
 sub opt_spec {
   return (
     [ "p=i",  "Number of process to run", { default => 1 }       ],
+    [ "r=s",  "Reference file (for VCF purpose)",       ],
     [ "splices|s=s",  "Bed file where splices will be extracted."       ],
     [ "chimeras|c=s",  "Tabulated file where chimeras will be extracted"       ],
     [ "mutations|m=s",  "VCF file where mutations will be extracted"       ],
@@ -48,10 +51,13 @@ sub execute {
   my $chimeras_file     = $opt->{chimeras};
   my $coverless_splices = $opt->{coverless_splices};
   my $is_stranded       = $opt->{stranded};
+  my $ref_file          = $opt->{r};
   my $nb_process        = defined $opt->{p}? $opt->{p} : 1;
 
   my $bam_file = shift @{$args};
   pod2usage(-verbose => 1)  unless defined $bam_file;
+  my $bam_reader   = CracTools::SAMReader->new($bam_file);
+  my $crac_version = $bam_reader->getCracVersionNumber();
   my @regions = @{$args};
   my $min_gap_length = MIN_GAP_LENGTH;
 
@@ -137,6 +143,8 @@ sub execute {
         $region_start,
         $region_end,
         $bam_file,
+        $ref_file,
+        $crac_version,
       ) if defined $mutations_fh;
       extractChimerasFromSAMline(\%region_chimeras,
         $line,
@@ -275,23 +283,38 @@ sub printSplices {
 =head2 extractMutationsFromSAMline
 =cut
 sub extractMutationsFromSAMline {
-  my ($mutations,$line,$is_stranded,$region_chr,$region_start,$region_end,$bam_file,$ref_file_folder) = @_;
+  my ($mutations,$line,$is_stranded,$region_chr,$region_start,$region_end,$bam_file,$ref_file,$crac_version) = @_;
   # Next for secondary alignements
   if(!$line->isFlagged(256) && !$line->isFlagged(2048)) {
     # If read has SNP
     foreach my $snp (@{$line->events('SNP')}) {
       # TODO make sure the SNP is contained in the region
       my ($chr,$pos) = ($snp->{loc}->{chr},$snp->{loc}->{pos});
+
       # We only add SNPS that correspond to the current region
       next if $pos >= $region_end || $pos < $region_start;
 
-      next if $snp->{actual} =~ /N/i;
-      $snp->{expected} = 'N' if $snp->{expected} =~ /\?/i;
+      # This correspond to a 1bp deletion
+      if($snp->{actual} eq '?') {
+        $pos--;
+        $snp->{expected} = getSeqOrNs($chr,$pos,2,$ref_file);
+        $snp->{actual}    = substr $snp->{expected}, 0, 1;
+      # This correspond to a 1bp insertion
+      } elsif($snp->{expected} eq '?') {
+        #$pos--; # Crac Already gives the position before the insertion...
+        # Get deleted seq on the reference to avoid cases where a insertion
+        # and a substitution are merged and CRAC has some difficulties
+        # to handle that...
+        #$snp->{actual}    = substr $line->seq, $snp->{pos}-1, 2;
+        $snp->{actual}    = getSeqOrNs($chr,$pos,1,$ref_file).substr $line->seq,$snp->{pos}, 1;
+        $snp->{expected}  = substr $snp->{actual}, 0, 1; 
+      }
 
       # Uniq Hash key for SNP
       my $key = 'SNP'.$chr."@".$pos;
 
-      addMutation(mutations => $mutations,
+      addMutation(
+        mutations   => $mutations,
         bam_file    => $bam_file,
         key         => $key,
         chr         => $chr,
@@ -299,71 +322,81 @@ sub extractMutationsFromSAMline {
         reference   => $snp->{expected},
         alternative => $snp->{actual},
         crac_score  => $snp->{score},
+        read_id     => $line->qname,
       );
     }
 
     # If read has a small deletions
     foreach my $del (@{$line->events('Del')}) {
       my ($chr,$pos) = ($del->{loc}->{chr},$del->{loc}->{pos});
+
       # We only add deletions that correspond to the current region
       next if $pos >= $region_end || $pos < $region_start;
 
       # Uniq hash key for deletion
-      my $key = 'Del'.$chr."@".$pos."@".$del->{nb};
+      my $key = 'Del'.$chr."@".$pos;#."@".$del->{nb};
+      
+      # Because VCF needs 1 base before the deletion
+      # but crac gives the position before the deletion so we
+      # do not need this
+      if(defined $crac_version && CracTools::Utils::isVersionGreaterOrEqual($crac_version,'2.4.0')) {
+        $pos--;
+      }
+      #$pos--;
 
       # Extract deleted genome sequence from reference if available
-      my $reference = '';
-      if(defined $ref_file_folder && -e "$ref_file_folder/chr".$del->{loc}->{chr}.".fa") {
-        # +1 because we start 1 base before the deletion
-        $reference = getSeqFromIndexedRef("$ref_file_folder/chr".$del->{loc}->{chr}.".fa",$chr,$pos,$del->{nb}+1);
-      # If we have not the reference sequence we use Ns
-      } else {
-        $reference .= 'N' for(1..$del->{nb}+1);
-      }
+      my $reference = getSeqOrNs($chr,$pos,$del->{nb}+1,$ref_file);
       my $alternative = substr $reference, 0, 1; 
 
-      addMutation(mutations => $mutations,
-        bam_file => $bam_file,
-        key => $key,
-        chr => $chr,
-        pos => $pos,
-        reference => $reference,
+      addMutation(
+        mutations   => $mutations,
+        bam_file    => $bam_file,
+        key         => $key,
+        chr         => $chr,
+        pos         => $pos,
+        reference   => $reference,
         alternative => $alternative,
-        crac_score => $del->{score},
+        crac_score  => $del->{score},
+        read_id     => $line->qname,
       );
     }
 
     # If read has a small insertions
     foreach my $ins (@{$line->events('Ins')}) {
       my ($chr,$pos) = ($ins->{loc}->{chr},$ins->{loc}->{pos});
+
       # We only add insertions that correspond to the current region
       next if $pos >= $region_end || $pos < $region_start;
-      my $ins_read_pos = $ins->{pos};
-      my $read_seq = $line->seq;
-
-      # Reverse insertion relative pos if read is mapped on the reverse strand
-      # because the SAM sequence will always correspond to the forward strand
-      #if($ins->{loc}->{strand} == -1) {
-      #  #$ins_read_pos = $ins_read_pos - $ins->{nb} + 1;
-      #  $#ins_read_pos = $ins_read_pos - $ins->{nb};
-      #}
 
       # Uniq hash key for insertion
-      my $key = 'Ins'.$chr."@".$pos."@".$ins->{nb};
+      my $key = 'Ins'.$chr."@".$pos;#."@".$ins->{nb};
 
-      #my $alternative = substr $read_seq, $ins_read_pos, $ins->{nb}+1;
-      # TODO verify this $ins_read_pos+1 !!!
-      my $alternative = substr $read_seq, $ins_read_pos+1, $ins->{nb}+1;
-      my $reference = substr $alternative, 0, 1; 
+      # Because VCF needs 1 base before the insertion
+      if(defined $crac_version && !CracTools::Utils::isVersionGreaterOrEqual($crac_version,'2.4.0')) {
+        $pos--;
+      }
 
-      addMutation(mutations => $mutations,
-        bam_file => $bam_file,
-        key => $key,
-        chr => $chr,
-        pos => $pos,
-        reference => $reference,
+      # CRAC gives the position in the read after the insertion...
+      my $inserted_sequence;
+      if(defined $crac_version && CracTools::Utils::isVersionGreaterOrEqual($crac_version,'2.4.0')) {
+        $inserted_sequence = substr $line->seq, $ins->{pos}, $ins->{nb};
+      } else {
+        $inserted_sequence = substr $line->seq, $ins->{pos}-$ins->{nb}+1, $ins->{nb};
+      }
+
+      my $alternative = getSeqOrNs($chr,$pos,1,$ref_file).$inserted_sequence;
+      my $reference   = substr $alternative, 0, 1; 
+
+      addMutation(
+        mutations   => $mutations,
+        bam_file    => $bam_file,
+        key         => $key,
+        chr         => $chr,
+        pos         => $pos,
+        reference   => $reference,
         alternative => $alternative,
-        crac_score => $ins->{score},
+        crac_score  => $ins->{score},
+        read_id     => $line->qname,
       );
     }
   }
@@ -391,11 +424,45 @@ sub printMutations {
 =cut
 sub addMutation {
   my %args = @_;
+
+  # Convert sequences to the uppercase
+  $args{reference}    = uc $args{reference};
+  $args{alternative}  = uc $args{alternative};
   
   my $MUTATIONS = $args{mutations};
   my $key = $args{key};
+  #my $key = $args{chr}."@".$args{pos};
+  my $mut = $MUTATIONS->{$key};
 
-  if(defined $MUTATIONS->{$key}) {
+  if(defined $mut) {
+    # If this mutation position already exists but the
+    # reference sequence is not the same (shorter or longer)
+    # we need to update the alternative
+    if($mut->{reference} ne $args{reference}) {
+      # If the current reference sequence is larger that the new one
+      # then we only need to update the alternative sequence of
+      # the new mutation
+      if(length($args{reference}) < length($mut->{reference})) {
+        $args{alternative} = $args{alternative}.substr($mut->{reference},length($args{reference}));
+      } elsif(length($args{reference}) > length($mut->{reference})) {
+        # If the new mutation reference is larger that the old one,
+        # we need to update all the previously added alternatives
+        foreach my $alt (keys %{$mut->{alternative}}) {
+          my $new_alt = $alt.substr($args{reference},length($mut->{reference}));
+          $mut->{alternative}{$new_alt} = $mut->{alternative}{$alt};
+          delete $mut->{alternative}{$alt};
+        }
+        # Then change the reference sequence
+        $mut->{reference}  = $args{reference};
+      } else {
+        # If both reference are not equal but have the same length
+        # then we have a problem sir
+        carp "Reference (".$args{reference}.") is different than the previous one (".$mut->{reference}.") for read (".$args{read_id}.")";
+        return 0;
+      }
+    }
+
+    # Finally we can add the new alternative to the current mutation entry
     if(defined $MUTATIONS->{$key}{alternative}{$args{alternative}}) {
       $MUTATIONS->{$key}{alternative}{$args{alternative}}++;
     } else {
@@ -425,13 +492,27 @@ sub countReadCoverFromRegion {
   return $nb_total;
 }
 
-=head2 getSeqFromIndexedRef
+=head2 getSeqOrNs
 =cut
-sub getSeqFromIndexedRef {
-  my ($ref_file,$chr,$pos,$length) = @_;
-  my $region = "$chr:$pos-".($pos+$length-1);
-  my $fasta_query = `samtools faidx $ref_file "$region"`;
-  my ($nam,$seq) = split("\n",$fasta_query);
+# TODO Create some kind of buffer to avoid repeating a query that have already been
+# submited
+my %retrieved_seq_buffer = ();
+sub getSeqOrNs {
+  my ($chr,$pos,$length,$ref_file) = @_;
+  # Init seq with buffer
+  my $seq = $retrieved_seq_buffer{"$chr-$pos-$length"};
+
+  if(defined $ref_file && !defined $seq) {
+    # Retrieve the seq from the reference
+    $seq = CracTools::Utils::getSeqFromIndexedRef($ref_file,$chr,$pos,$length,'raw');
+    # We update the buffer
+    $retrieved_seq_buffer{"$chr-$pos-$length"} = $seq if defined $seq;
+  }
+
+  # If no seq is available we put N's instead
+  if(!defined $seq) {
+    $seq .= 'N' for(1..$length);
+  }
   return $seq;
 }
 

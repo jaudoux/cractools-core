@@ -98,6 +98,30 @@ sub reverse_tab($) {
   return $newString;
 }
 
+=head2 isVersionGreaterOrEqual($v1,$v2)
+
+Return true is version number v1 is greater than v2
+
+=cut
+
+sub isVersionGreaterOrEqual($$) {
+  my ($v1,$v2) = @_;
+  my @v1_nums = split(/\./,$v1);
+  my @v2_nums = split(/\./,$v2);
+  for(my $i = 0; $i < @v1_nums; $i++) {
+    if($v1_nums[$i] >= $v2_nums[$i]) {
+      return 1;
+    }else {
+      return 0;
+    }
+  }
+  if(scalar @v2_nums > @v1_nums) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
 =head2 convertStrand
 
 Convert strand from '+/-' standard to '1/-1' standard and the opposite.
@@ -141,6 +165,16 @@ sub removeChrPrefix($) {
   my $string = shift;
   $string =~ s/^chr//;
   return $string;
+}
+
+=head2 addChrPrefix
+
+Add the "chr" prefix to the given string
+
+=cut
+sub addChrPrefix($) {
+  my $string = shift;
+  return "chr".removeChrPrefix($string);
 }
 
 =head1 PARSING
@@ -485,14 +519,29 @@ Return a sequence from a given region in a fasta indexed file
 
 Example:
   
-  my $fasta_seq = CracTools::Utils::getSeqFromIndexedRef("file.fa","chr2",29012,10);
+  my $fasta_seq = getSeqFromIndexedRef("file.fa","chr2",29012,10);
+  my $seq       = getSeqFromIndexedRef("file.fa","chr2",29012,10,'raw');
+
 
 =cut
 
 sub getSeqFromIndexedRef {
   my ($ref_file,$chr,$pos,$length,$format) = @_;
-  my $region = "$chr:$pos-".($pos+$length-1);
-  return `samtools faidx $ref_file "$region"`;
+  $format = 'fasta' if !defined $format;
+  $pos++; # +1 because samtools faidx is 1-based
+  # First we try without the "chr" prefix
+  my $region = removeChrPrefix($chr).":$pos-".($pos+$length-1);
+  my $fasta_seq = `samtools faidx $ref_file "$region"`;
+  # If it has not worked, we try without
+  if($fasta_seq !~ /^>\S+\n\S+/) {
+    $region = addChrPrefix($chr).":$pos-".($pos+$length-1);
+    $fasta_seq = `samtools faidx $ref_file "$region"`;
+  }
+  if($format eq 'raw') {
+    my ($seq) = $fasta_seq =~ /^>\S+\n(\S+)/;
+    return $seq;
+  }
+  return $fasta_seq;
 }
 
 =head1 PARSING LINES
