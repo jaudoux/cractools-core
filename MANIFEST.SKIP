@@ -18,6 +18,7 @@ MANIFEST.SKIP
 
 # temprary skipped
 lib/CracTools/App/Count.pm
+t/CracTools-App-Count.t
 lib/CracTools/Aligner
 bin/cractools-filtern
 bin/cractools-count
