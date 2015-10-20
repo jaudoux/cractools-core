@@ -711,6 +711,22 @@ sub parseSAMLineLite {
   };
 }
 
+=head2 parseCigarChain
+
+Given a CIGAR chain (see SAM specification), return a parsed version as an Array ref of 
+cigar elements represented as { nb => 10, op => 'M' }.
+
+=cut
+
+sub parseCigarChain {
+  my $cigar_string = shift;
+  my @cigar;
+  while($cigar_string =~ /(\d+)(\S)/g) {
+    push @cigar, { op => $2, nb => $1 };
+  }
+  return \@cigar;
+}
+
 
 =head1 FILES IO
 

@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 77;
+use Test::More tests => 88;
 use CracTools::Utils;
 use Inline::Files 0.68;
 use File::Temp;
@@ -176,6 +176,23 @@ is(CracTools::Utils::convertStrand('-'),-1);
   my $sam_line = "HWI-ST225:407:C0KV8ACXX:1:1101:2576:2209\t161\t17\t41594644\t254\t45M2807N56M\t17\t41597762\t0\tCGGAAATCCAGAGAACCAACTTAGCAAGCACAGTGCTGTCACTCAAGGCCATGGGTATCAATGATCTGCTGTCCTTTGATTTCATGGATGCCCCACCTATG\t".'@B@FDFDFGHDHDBEE=EBFGGIJCHIEGGIIH9CFGHGIJECG>BDGGFD8DHG)=FHGGGCGIIIEGHDCCEEHED7;?@ECCEA;3>ACDDB?BBAAC'."\tNH:i:2";
   my $parsed_line =CracTools::Utils::parseSAMLineLite($sam_line);
   #print STDERR Dumper($parsed_line);
+}
+
+# parseCigarChain
+{
+  my $cigar_chain = "12S5M1X2I3M";
+  my @cigar = @{CracTools::Utils::parseCigarChain($cigar_chain)};
+  is(@cigar, 5);
+  is($cigar[0]->{op}, 'S');
+  is($cigar[0]->{nb}, 12);
+  is($cigar[1]->{op}, 'M');
+  is($cigar[1]->{nb},  5);
+  is($cigar[2]->{op}, 'X');
+  is($cigar[2]->{nb},  1);
+  is($cigar[3]->{op}, 'I');
+  is($cigar[3]->{nb},  2);
+  is($cigar[4]->{op}, 'M');
+  is($cigar[4]->{nb},  3);
 }
 
 
