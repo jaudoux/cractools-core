@@ -201,7 +201,7 @@ sub encodePosListToBase64 {
   return "" if @pos_list == 0;
 
   # Compute the appropriate length for the bitList
-  my $length = @pos_list[-1] + 1;
+  my $length = $pos_list[-1] + 1;
   my $bitList_length = int($length / $Base64_BITNESS);
   if ($length % $Base64_BITNESS > 0) {
       $bitList_length++;
