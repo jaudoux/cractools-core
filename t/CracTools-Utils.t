@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 88;
+use Test::More tests => 95;
 use CracTools::Utils;
 use Inline::Files 0.68;
 use File::Temp;
@@ -193,6 +193,19 @@ is(CracTools::Utils::convertStrand('-'),-1);
   is($cigar[3]->{nb},  2);
   is($cigar[4]->{op}, 'M');
   is($cigar[4]->{nb},  3);
+}
+
+# Encoding in Base64
+{
+  my $encoded_list = CracTools::Utils::encodePosListToBase64(1,3,5,8,12,32);
+  my @decoded_list = CracTools::Utils::decodePosListInBase64($encoded_list);
+  is(@decoded_list,6);
+  is($decoded_list[0],1);
+  is($decoded_list[1],3);
+  is($decoded_list[2],5);
+  is($decoded_list[3],8);
+  is($decoded_list[4],12);
+  is($decoded_list[5],32);
 }
 
 

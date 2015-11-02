@@ -177,6 +177,81 @@ sub addChrPrefix($) {
   return "chr".removeChrPrefix($string);
 }
 
+=head1 ENCODING
+
+=head2 encodePosListToBase64
+
+Encode a (0-based) list of increasing position to a string using Base64
+encoding scheme : ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+
+  my $encoded_list = CracTools::Utils::encodePosListToBase64(1,3,5,8,12,32);
+  my @decoded_list = CracTools::Utils::decodePosListInBase54($encoded_list);
+
+=cut
+
+our $Base64_BITNESS = 6;
+our @Base64_ENCODING = qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z a b c d e f g h i j k l m n o p q r s t u v w x y z 0 1 2 3 4 5 6 7 8 9 + /);
+
+# Encode error list into base64
+sub encodePosListToBase64 {
+  my @pos_list = @_;
+  my @bitList; 
+  my $encoded_str;
+
+  return "" if @pos_list == 0;
+
+  # Compute the appropriate length for the bitList
+  my $length = @pos_list[-1] + 1;
+  my $bitList_length = int($length / $Base64_BITNESS);
+  if ($length % $Base64_BITNESS > 0) {
+      $bitList_length++;
+  }
+
+  # Put 0 at all position
+  for (my $i = 0; $i < $bitList_length; $i++) {
+    $bitList[$i] = 0;
+  }
+
+  # Create bit vector in Base64_ENCODING
+  foreach my $j (@pos_list) {
+    $bitList[int($j / $Base64_BITNESS)] |= (1 << ($j % $Base64_BITNESS));
+  }
+  
+  # Convert bitList into string_Base64_ENCODING
+  for(my $k=0; $k < $bitList_length; $k++) {
+    $encoded_str .= scalar($Base64_ENCODING[$bitList[$k]]); 
+  }
+  return $encoded_str;
+}
+
+# Decode base 64 error list
+sub decodePosListInBase64 {
+  my $encoded_str = shift;
+
+  my @encoded_list = split "", $encoded_str;
+  my (@index,@decoded_list);
+
+  #Looking for index of each char
+  foreach my $j (@encoded_list) {
+    my @ind = grep { $Base64_ENCODING[$_] eq $j } 0 .. $#Base64_ENCODING;
+    push(@index,$ind[0]);
+  }
+
+  # Convert into list position     
+  for (my $e = 0; $e < (0+@encoded_list);$e++) {
+    for(my $i=0; $i<$Base64_BITNESS; $i++) {
+      if ($index[$e] & (1 << $i)) {
+        my $pos = (int($i+$Base64_BITNESS*$e));
+        push(@decoded_list,$pos);
+      }
+    }
+  }  
+
+  return @decoded_list; 
+}
+
+
+
 =head1 PARSING
 
 This are some tools that aim to read (bio) files like
