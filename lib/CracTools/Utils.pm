@@ -185,7 +185,7 @@ Encode a (0-based) list of increasing position to a string using Base64
 encoding scheme : ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
 
   my $encoded_list = CracTools::Utils::encodePosListToBase64(1,3,5,8,12,32);
-  my @decoded_list = CracTools::Utils::decodePosListInBase54($encoded_list);
+  my @decoded_list = CracTools::Utils::decodePosListInBase64($encoded_list);
 
 =cut
 
