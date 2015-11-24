@@ -170,10 +170,10 @@ sub execute {
   # Print headers on output files
   print $splices_fh "track name=junctions\n" if defined $splices_fh;
   print $mutations_fh "##fileformat=VCFv4.1\n",
-    "###source=$CracTools::DIST (v $CracTools::VERSION)\n",
-    "###INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">\n",
-    "###INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">\n",
-    "###INFO=<ID=CS,Number=A,Type=Float,Description=\"CRAC confidence score\">\n",
+    "##source=$CracTools::DIST (v $CracTools::VERSION)\n",
+    "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">\n",
+    "##INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">\n",
+    "##INFO=<ID=CS,Number=A,Type=Float,Description=\"CRAC confidence score\">\n",
     "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" if defined $mutations_fh;
 
   for (my $region_id = 1; $region_id <= $nb_region; $region_id++) {
