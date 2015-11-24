@@ -308,6 +308,13 @@ sub extractMutationsFromSAMline {
         #$snp->{actual}    = substr $line->seq, $snp->{pos}-1, 2;
         $snp->{actual}    = getSeqOrNs($chr,$pos,1,$ref_file).substr $line->seq,$snp->{pos}, 1;
         $snp->{expected}  = substr $snp->{actual}, 0, 1; 
+      } else {
+        # If this this a regular SNP, we check if CRAC's reference is right, otherwise
+        # we have a problem in CRAC's calling prediction
+        if(defined $ref_file && $snp->{expected} ne getSeqOrNs($chr,$pos,1,$ref_file)) {
+          print STDERR "CRAC's SNP calling ($chr:$pos ".$snp->{expected}." => ".$snp->{actual}.") does not match the reference (".getSeqOrNs($chr,$pos,1,$ref_file)."), variant skipped (see read ".$line->qname." for more information)\n";
+          next;
+        }
       }
 
       # Uniq Hash key for SNP
