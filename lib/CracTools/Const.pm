@@ -31,6 +31,18 @@ our $NOT_AVAILABLE = 'NA';
 
 our $NUCLEOTIDES = ['A', 'C', 'G', 'T' ];
 
+=item CRAC_BINARY => "crac'
+
+=cut
+
+our $CRAC_BINARY = "crac";
+
+=item INDEX_DEFAULT => "GRCh38"
+
+=cut
+
+our $INDEX_DEFAULT = "GRCh38";
+
 =back
 
 =cut
