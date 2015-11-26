@@ -41,7 +41,7 @@ our $CRAC_BINARY = "crac";
 
 =cut
 
-our $INDEX_DEFAULT = "GRCh38";
+our $INDEX_DEFAULT = "/data/indexes/crac/GRCh38";
 
 =back
 
