@@ -292,6 +292,7 @@ sub extractMutationsFromSAMline {
       my ($chr,$pos) = ($snp->{loc}->{chr},$snp->{loc}->{pos});
 
       # We only add SNPS that correspond to the current region
+      next if $chr ne $region_chr;
       next if $pos >= $region_end || $pos < $region_start;
 
       # This correspond to a 1bp deletion
