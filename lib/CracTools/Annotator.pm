@@ -153,8 +153,8 @@ sub mode {
 
 sub foundAnnotation {
   my $self = shift;
-  my ($chr,$pos_start,$pos_end,$strand) = @_;
-  my @candidates = @{ $self->getAnnotationCandidates($chr,$pos_start,$pos_end,$strand)};
+  #my ($chr,$pos_start,$pos_end,$strand) = @_;
+  my @candidates = @{ $self->getAnnotationCandidates(@_)};
   return (scalar @candidates > 0);
 }
 
@@ -425,7 +425,7 @@ sub getCandidatePriorityDefault {
   my ($priority,$type) = (-1,'');
   my ($mRNA,$exon) = ($candidate->{mRNA},$candidate->{exon});
   if(defined $mRNA) {
-    if($mRNA->attribute('type') =~ /protein_coding/i) {
+    if(defined $mRNA->attribute('type') && $mRNA->attribute('type') =~ /protein_coding/i) {
       if(defined $exon) {
         if(($exon->start <= $pos_start) && ($exon->end >= $pos_end)) {
           $priority = 1;
@@ -443,8 +443,8 @@ sub getCandidatePriorityDefault {
           $type = 'INXON';
         }
       } else {
-	$priority = 4;
-	$type = 'INTRON';
+        $priority = 4;
+        $type = 'INTRON';
       }
     } else {
       if(defined $exon) {
