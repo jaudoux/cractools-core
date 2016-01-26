@@ -9,11 +9,11 @@ use warnings;
 
 =head1 SYNOPSIS
 
-Convert gtf2 fils to gff3, and merge exons that have the exact same coordinates.
+Convert gtf2 files to gff3, exons with same exact same coordinates are merged.
 
 =cut
 
-sub usage_desc { "cractools extract file.bam [regions] [-p nb_threads] [--splices splice.bed] [--mutations file.vcf] [--chimeras chimeras.tsv]" }
+sub usage_desc { "cractools gtftogff file.gtf > file.gff" }
 
 sub opt_spec {
   return ();
