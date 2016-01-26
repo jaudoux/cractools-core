@@ -3,6 +3,7 @@ package CracTools::App::Command::GtfToGff;
 # PODNAME: cractools gtftogff
 
 use CracTools::App -command;
+use CracTools::Output;
 
 use strict;
 use warnings;
