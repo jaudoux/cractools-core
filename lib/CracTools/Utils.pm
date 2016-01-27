@@ -540,7 +540,7 @@ Return a hashref with the chimera parsed:
     spanning_PE       => $spanning_PE,                                          
     class             => $class,                                                      
     comments          => { coment_id => 'comment_value', ... },
-    extend_fields     => { extend_field_id => 'extend_field_value', ... },
+    extended_fields     => { extended_field_id => 'extended_field_value', ... },
   }
 
 =cut
