@@ -809,6 +809,8 @@ sub parseCigarChain {
 
 =head2 getFileIterator
 
+Generic method to parse files.
+
 =cut
 
 sub getFileIterator {
@@ -882,6 +884,7 @@ sub getFileIterator {
       my $parsed_line = $parsing_method->($line,@parsing_arguments);
       # Add seek pos to the output hashref
       $parsed_line->{seek_pos} = $curr_pos;
+      $parsed_line->{_original_line} = $line;
       $curr_pos = tell($fh);
       $line = <$fh>; # Get next line
       return $parsed_line;
