@@ -528,6 +528,7 @@ Return a hashref with the chimera parsed:
   {
     sample            => $sample,                                                    
     chim_key          => $chim_key,                                                
+    name              => $name,
     chr1              => $chr1,                                                        
     pos1              => $pos1,                                                        
     strand1           => $strand1,                                                  
@@ -745,7 +746,8 @@ sub parseChimCTLine {
   }                                                                       
   return {                                                                
     sample            => $sample,                                                    
-    chim_key          => $chim_key,                                                
+    chim_key          => $chim_key,
+    name              => $name,
     chr1              => $chr1,                                                        
     pos1              => $pos1,                                                        
     strand1           => $strand1,                                                  
