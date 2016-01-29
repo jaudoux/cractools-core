@@ -224,7 +224,7 @@ sub encodePosListToBase64 {
   return $encoded_str;
 }
 
-=head2 decodePosListToBase64
+=head2 decodePosListInBase64
 
 Decode position list encoded by encodePosListToBase64.
 
