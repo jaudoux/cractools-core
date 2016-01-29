@@ -224,6 +224,12 @@ sub encodePosListToBase64 {
   return $encoded_str;
 }
 
+=head2 decodePosListToBase64
+
+Decode position list encoded by encodePosListToBase64.
+
+=cut
+
 # Decode base 64 error list
 sub decodePosListInBase64 {
   my $encoded_str = shift;
