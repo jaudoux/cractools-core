@@ -163,7 +163,7 @@ will print
 =cut
 sub removeChrPrefix($) {
   my $string = shift;
-  $string =~ s/^chr//;
+  $string =~ s/^chr//i;
   return $string;
 }
 
@@ -837,7 +837,7 @@ sub getFileIterator {
       $parsing_method = sub { return parseGFFLine(@_,$type) };
       push (@parsing_arguments,$type);
     } elsif($type =~ /bed/i) {
-      $header_regex = '^track\s';
+      $header_regex = '(^track\s)|(^#)';
       $parsing_method = \&parseBedLine;
     } elsif ($type =~ /vcf/i) {
       $header_regex = '^#';
