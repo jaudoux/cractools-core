@@ -145,7 +145,7 @@ will print
 my %conversion_hash = ( '+' => 1, '-' => '-1', '1' => '+', '-1' => '-');
 sub convertStrand($) {
   my $strand = shift;
-  return $conversion_hash{$strand};
+  return defined $strand? $conversion_hash{$strand} : undef;
 }
 
 =head2 removeChrPrefix
