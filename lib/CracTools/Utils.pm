@@ -55,7 +55,7 @@ Bio::Lite is a lightweight-single-module with NO DEPENDENCIES.
 Reverse complemente the (nucleotid) sequence in arguement.
 
 Example:
-  
+
   my $seq_revcomp = reverseComplement($seq);
 
 reverseComplement is more than B<100x faster than Bio-Perl> revcom_as_string()
@@ -64,10 +64,10 @@ reverseComplement is more than B<100x faster than Bio-Perl> revcom_as_string()
 
 sub reverseComplement($) {
   my $dna = shift;
-  
+
   # reverse the DNA sequence
   my $revcomp = reverse $dna;
-  
+
   # complement the reversed DNA sequence
   $revcomp =~ tr/ACGTacgt/TGCAtgca/;
   return $revcomp;
@@ -145,7 +145,7 @@ will print
 my %conversion_hash = ( '+' => 1, '-' => '-1', '1' => '+', '-1' => '-');
 sub convertStrand($) {
   my $strand = shift;
-  return $conversion_hash{$strand};
+  return defined $strand? $conversion_hash{$strand} : undef;
 }
 
 =head2 removeChrPrefix
@@ -153,7 +153,7 @@ sub convertStrand($) {
 Remove the "chr" prefix from a given string
 
 Example:
-  
+
   say "reference name: ",removeChrPrefix("chr1");
 
 will print
@@ -195,7 +195,7 @@ our @Base64_ENCODING = qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z a 
 # Encode error list into base64
 sub encodePosListToBase64 {
   my @pos_list = @_;
-  my @bitList; 
+  my @bitList;
   my $encoded_str;
 
   return "" if @pos_list == 0;
@@ -216,10 +216,10 @@ sub encodePosListToBase64 {
   foreach my $j (@pos_list) {
     $bitList[int($j / $Base64_BITNESS)] |= (1 << ($j % $Base64_BITNESS));
   }
-  
+
   # Convert bitList into string_Base64_ENCODING
   for(my $k=0; $k < $bitList_length; $k++) {
-    $encoded_str .= scalar($Base64_ENCODING[$bitList[$k]]); 
+    $encoded_str .= scalar($Base64_ENCODING[$bitList[$k]]);
   }
   return $encoded_str;
 }
@@ -243,7 +243,7 @@ sub decodePosListInBase64 {
     push(@index,$ind[0]);
   }
 
-  # Convert into list position     
+  # Convert into list position
   for (my $e = 0; $e < (0+@encoded_list);$e++) {
     for(my $i=0; $i<$Base64_BITNESS; $i++) {
       if ($index[$e] & (1 << $i)) {
@@ -251,9 +251,9 @@ sub decodePosListInBase64 {
         push(@decoded_list,$pos);
       }
     }
-  }  
+  }
 
-  return @decoded_list; 
+  return @decoded_list;
 }
 
 
@@ -288,7 +288,7 @@ Example:
   }
 
 Return: HashRef
-  
+
   { name => 'sequence_identifier',
     seq  => 'sequence_value',
     qual => 'sequence_quality', # only defined for FASTQ files
@@ -327,7 +327,7 @@ sub seqFileIterator {
     my $prev_line = <$fh>;
     chomp $prev_line;
     return sub {
-      my ($name,$seq,$qual); 
+      my ($name,$seq,$qual);
       if(defined $prev_line) {
         ($name) = $prev_line =~ />(.*)$/;
         $prev_line = <$fh>;
@@ -346,7 +346,7 @@ sub seqFileIterator {
   # FASTQ ITERATOR
   } elsif ($format eq 'fastq') {
     return sub {
-      my ($name,$seq,$qual); 
+      my ($name,$seq,$qual);
       my $line = <$fh>;
       ($name) = $line =~ /@(.*)$/ if defined $line;
       if(defined $name) {
@@ -426,7 +426,7 @@ sub writeSeq {
   }
 }
 
-=head2 bedFileIterator 
+=head2 bedFileIterator
 
 manage BED files format
 
@@ -464,7 +464,7 @@ sub bedFileIterator {
   return getFileIterator(file => shift, type => 'bed');
 }
 
-=head2 gffFileIterator 
+=head2 gffFileIterator
 
 manage GFF3 and GTF2 file format
 
@@ -501,7 +501,7 @@ sub gffFileIterator {
   return getFileIterator(file => $file, type => $type);
 }
 
-=head2 vcfFileIterator 
+=head2 vcfFileIterator
 
 manage VCF file format
 
@@ -530,21 +530,21 @@ sub vcfFileIterator {
 =head2 chimCTFileIterator
 
 Return a hashref with the chimera parsed:
-  
+
   {
-    sample            => $sample,                                                    
-    chim_key          => $chim_key,                                                
+    sample            => $sample,
+    chim_key          => $chim_key,
     name              => $name,
-    chr1              => $chr1,                                                        
-    pos1              => $pos1,                                                        
-    strand1           => $strand1,                                                  
-    chr2              => $chr2,                                                        
-    pos2              => $pos2,                                                        
-    strand2           => $strand2,                                                  
-    chim_value        => $chim_value,                                            
-    spanning_junction => $spanning_junction,                              
-    spanning_PE       => $spanning_PE,                                          
-    class             => $class,                                                      
+    chr1              => $chr1,
+    pos1              => $pos1,
+    strand1           => $strand1,
+    chr2              => $chr2,
+    pos2              => $pos2,
+    strand2           => $strand2,
+    chim_value        => $chim_value,
+    spanning_junction => $spanning_junction,
+    spanning_PE       => $spanning_PE,
+    class             => $class,
     comments          => { coment_id => 'comment_value', ... },
     extended_fields     => { extended_field_id => 'extended_field_value', ... },
   }
@@ -588,8 +588,8 @@ sub bamFileIterator {
   }
 
   return sub {
-    return <$fh>; 
-  } 
+    return <$fh>;
+  }
 
 }
 
@@ -600,7 +600,7 @@ BE AWARE this method is only availble if C<samtools> binary is availble.
 Return a sequence from a given region in a fasta indexed file
 
 Example:
-  
+
   my $fasta_seq = getSeqFromIndexedRef("file.fa","chr2",29012,10);
   my $seq       = getSeqFromIndexedRef("file.fa","chr2",29012,10,'raw');
 
@@ -644,8 +644,8 @@ sub parseBedLine {
     my @block_starts = split(",",$block_starts);
     my $cumulated_block_size = 0;
     for(my $i = 0; $i < $block_count; $i++) {
-      push(@blocks,{size        => $block_size[$i], 
-                   start        => $block_starts[$i], 
+      push(@blocks,{size        => $block_size[$i],
+                   start        => $block_starts[$i],
                    end          => $block_starts[$i] + $block_size[$i],
                    block_start  => $cumulated_block_size,
                    block_end    => $cumulated_block_size + $block_size[$i],
@@ -657,10 +657,10 @@ sub parseBedLine {
   }
 
   return { chr        => $chr,
-    start       => $start, 
-    end         => $end, 
+    start       => $start,
+    end         => $end,
     name        => $name,
-    score       => $score, 
+    score       => $score,
     strand      => $strand,
     thick_start => $thick_start,
     thick_end   => $thick_end,
@@ -693,10 +693,10 @@ sub parseGFFLine {
   }
   return { chr        => $chr,
     source     => $source,
-    feature    => $feature, 
-    start      => $start, 
-    end        => $end, 
-    score      => $score, 
+    feature    => $feature,
+    start      => $start,
+    end        => $end,
+    score      => $score,
     strand     => $strand,
     frame      => $frame,
     attributes => \%attributes_hash,
@@ -710,13 +710,10 @@ sub parseGFFLine {
 sub parseVCFLine {
   my $line = shift;
   my($chr,$pos,$id,$ref,$alt,$qual,$filter,$info) = split("\t",$line);
-  my @alts = split(",",$alt);
-  my %infos;
-  my @infos = split(";",$info);
-  foreach (@infos) {
-    my($k,$v) = split("=",$_);
-    $infos{$k} = $v if defined $k && defined $v;
-  }
+
+  my @alts = defined $alt? split(",",$alt) : ();
+  my %infos = defined $info?
+  map { my ($k,$v) = split '='; $k => $v } split ';', $info : ();
 
   return { chr => $chr,
     pos     => $pos,
@@ -733,41 +730,41 @@ sub parseVCFLine {
 
 =cut
 
-sub parseChimCTLine {                                                     
-  my $line = shift;                                                       
+sub parseChimCTLine {
+  my $line = shift;
   my($id,$name,$chr1,$pos1,$strand1,$chr2,$pos2,$strand2,$chim_value,$spanning_junction,$spanning_PE,$class,$comments,@others) = split("\t",$line);
-  my($sample,$chim_key) = split(":",$id);                                 
-  my @comments = split(",",$comments);                                    
-  my %comments;                                                           
-  foreach my $com (@comments){                                            
-      my ($key,$val) = split("=",$com);                                   
-      $comments{$key} = $val;                                             
-  }                                                                       
-  my %extend_fields;                                                      
-  foreach my $field (@others) {                                           
-    my ($key,$val) = split("=",$field);                                   
-    if(defined $key && defined $val) {                                    
-      $extend_fields{$key} = $val;                                        
-    }                                                                     
-  }                                                                       
-  return {                                                                
-    sample            => $sample,                                                    
+  my($sample,$chim_key) = split(":",$id);
+  my @comments = split(",",$comments);
+  my %comments;
+  foreach my $com (@comments){
+      my ($key,$val) = split("=",$com);
+      $comments{$key} = $val;
+  }
+  my %extend_fields;
+  foreach my $field (@others) {
+    my ($key,$val) = split("=",$field);
+    if(defined $key && defined $val) {
+      $extend_fields{$key} = $val;
+    }
+  }
+  return {
+    sample            => $sample,
     chim_key          => $chim_key,
     name              => $name,
-    chr1              => $chr1,                                                        
-    pos1              => $pos1,                                                        
-    strand1           => $strand1,                                                  
-    chr2              => $chr2,                                                        
-    pos2              => $pos2,                                                        
-    strand2           => $strand2,                                                  
-    chim_value        => $chim_value,                                            
-    spanning_junction => $spanning_junction,                              
-    spanning_PE       => $spanning_PE,                                          
-    class             => $class,                                                      
-    comments          => \%comments,                                               
-    extended_fields     => \%extend_fields,                                     
-  };                                                                      
-} 
+    chr1              => $chr1,
+    pos1              => $pos1,
+    strand1           => $strand1,
+    chr2              => $chr2,
+    pos2              => $pos2,
+    strand2           => $strand2,
+    chim_value        => $chim_value,
+    spanning_junction => $spanning_junction,
+    spanning_PE       => $spanning_PE,
+    class             => $class,
+    comments          => \%comments,
+    extended_fields     => \%extend_fields,
+  };
+}
 
 =head2 parseSAMLineLite
 
@@ -796,7 +793,7 @@ sub parseSAMLineLite {
 
 =head2 parseCigarChain
 
-Given a CIGAR chain (see SAM specification), return a parsed version as an Array ref of 
+Given a CIGAR chain (see SAM specification), return a parsed version as an Array ref of
 cigar elements represented as { nb => 10, op => 'M' }.
 
 =cut
@@ -873,7 +870,7 @@ sub getFileIterator {
       $line = <$fh>;
     }
   }
-  
+
   # Skip line that match a specific regex
   if(defined $header_regex) {
     while($line && $line =~ /$header_regex/) {
@@ -906,7 +903,7 @@ Return a file handle for the file in argument.
 Display errors if file cannot be oppenned and manage gzipped files (based on .gz file extension)
 
 Example:
-  
+
   my $fh = getReadingFileHandle('file.txt.gz');
   while(<$fh>) {
     print $_;
@@ -932,7 +929,7 @@ Return a file handle for the file in argument.
 Display errors if file cannot be oppenned and manage gzipped files (based on .gz file extension)
 
 Example:
-  
+
   my $fh = getWritingFileHandle('file.txt.gz');
   print $fh "Hello world\n";
   close $fh;
@@ -950,7 +947,7 @@ sub getWritingFileHandle {
   return $fh;
 }
 
-=head2 getLineFromSeekPos 
+=head2 getLineFromSeekPos
 
   getLineFromSeekPos($filehandle,$seek_pos);
 
