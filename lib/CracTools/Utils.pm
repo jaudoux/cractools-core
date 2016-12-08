@@ -715,7 +715,7 @@ sub parseVCFLine {
   my @infos = split(";",$info);
   foreach (@infos) {
     my($k,$v) = split("=",$_);
-    $infos{$k} = $v;
+    $infos{$k} = $v if defined $k && defined $v;
   }
 
   return { chr => $chr,
