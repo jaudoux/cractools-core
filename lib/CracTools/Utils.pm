@@ -680,7 +680,7 @@ sub parseGFFLine {
   if($type =~ /gff3/i) {
     $attribute_split = sub {my $attr = shift; return $attr =~ /(\S+)=(.*)/;};
   } elsif ($type eq 'gtf' || $type eq 'gff2') {
-    $attribute_split = sub {my $attr = shift; return $attr  =~ /(\S+)\s+"(.*)"/;};
+    $attribute_split = sub {my $attr = shift; return $attr  =~ /(\S+)\s+"?(.*)"?/;};
   } else {
     croak "Undefined GFF format (must be either gff3,gtf, or gff2)";
   }
@@ -689,7 +689,9 @@ sub parseGFFLine {
   my %attributes_hash;
   foreach my $attr (@attributes_tab) {
     my ($k,$v) = $attribute_split->($attr);
-    $attributes_hash{$k} = $v;
+    if(defined $k and defined $v) {
+      $attributes_hash{$k} = $v;
+    }
   }
   return { chr        => $chr,
     source     => $source,
