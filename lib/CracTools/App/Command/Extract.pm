@@ -202,9 +202,9 @@ sub extractSplicesFromSAMline {
       # Only report splices that belong to the query regions
       # with a gap > MIN_GAP_LENGTH
       # and with a 'normal' type (ie. not 'coverless')
-      next if ($splice->{loc}->{pos} >= $region_end 
-        || $splice->{loc}->{pos} < $region_start 
-        || $splice->{loc}->{chr} ne $region_chr 
+      next if ($splice->{loc}->{pos} >= $region_end
+        || $splice->{loc}->{pos} < $region_start
+        || $splice->{loc}->{chr} ne $region_chr
         || $splice->{gap} < $min_gap_length
       );
 
@@ -276,7 +276,7 @@ sub printSplices {
                      0,
                      2,
                      ($splice->{pos}-$splice->{min}).",".($splice->{max}-($splice->{pos}+$splice->{gap})),
-                     "0,".(($splice->{pos}+$splice->{gap})-$splice->{min}), "\n";
+                     "0,".($splice->{pos}+$splice->{gap}), "\n";
   }
 }
 
@@ -308,7 +308,7 @@ sub extractMutationsFromSAMline {
         # to handle that...
         #$snp->{actual}    = substr $line->seq, $snp->{pos}-1, 2;
         $snp->{actual}    = getSeqOrNs($chr,$pos,1,$ref_file).substr $line->seq,$snp->{pos}, 1;
-        $snp->{expected}  = substr $snp->{actual}, 0, 1; 
+        $snp->{expected}  = substr $snp->{actual}, 0, 1;
       } else {
         # If this this a regular SNP, we check if CRAC's reference is right, otherwise
         # we have a problem in CRAC's calling prediction
@@ -343,7 +343,7 @@ sub extractMutationsFromSAMline {
 
       # Uniq hash key for deletion
       my $key = 'Del'.$chr."@".$pos;#."@".$del->{nb};
-      
+
       # Because VCF needs 1 base before the deletion
       # but crac gives the position before the deletion so we
       # do not need this
@@ -354,7 +354,7 @@ sub extractMutationsFromSAMline {
 
       # Extract deleted genome sequence from reference if available
       my $reference = getSeqOrNs($chr,$pos,$del->{nb}+1,$ref_file);
-      my $alternative = substr $reference, 0, 1; 
+      my $alternative = substr $reference, 0, 1;
 
       addMutation(
         mutations   => $mutations,
@@ -393,7 +393,7 @@ sub extractMutationsFromSAMline {
       }
 
       my $alternative = getSeqOrNs($chr,$pos,1,$ref_file).$inserted_sequence;
-      my $reference   = substr $alternative, 0, 1; 
+      my $reference   = substr $alternative, 0, 1;
 
       addMutation(
         mutations   => $mutations,
@@ -436,7 +436,7 @@ sub addMutation {
   # Convert sequences to the uppercase
   $args{reference}    = uc $args{reference};
   $args{alternative}  = uc $args{alternative};
-  
+
   my $MUTATIONS = $args{mutations};
   my $key = $args{key};
   #my $key = $args{chr}."@".$args{pos};
@@ -562,7 +562,7 @@ sub printChimeras {
   my $output_fh = shift;
   #foreach my $chimera (sort {$a->{chr1} <=> $b->{chr1} || $a->{pos1} <=> $b->{pos1}} values  %{$chimeras}) {
   foreach my $chim_key (keys  %{$chimeras}) {
-    
+
     my($chr1,$pos1,$strand1,$chr2,$pos2,$strand2) = split("@",$chim_key);
 
     print $output_fh join "\t", $chr1,
